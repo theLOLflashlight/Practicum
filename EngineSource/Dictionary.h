@@ -40,19 +40,15 @@ public:
     template< typename T >
     struct _iterator;
 
-    using Iterator = _iterator< ValueType >;
+    using Iterator      = _iterator< ValueType >;
     using ConstIterator = _iterator< const ValueType >;
 
-    using EntryType           = MapEntry< KeyType, ValueType >;
-    using InitializerListType = std::initializer_list< EntryType >;
-
-private:
-
-    void*  _pData;      // Pointer to the allocated memory.
-    size_t _capacity;   // Maximum number of entries that can be stored by _pData.
-    size_t _count;      // Current number of entries that are stored by _pData.
+    using Entry           = MapEntry< KeyType, ValueType >;
+    using InitializerListType = std::initializer_list< Entry >;
 
     friend void std::swap( Dictionary& a, Dictionary& b );
+
+private:
 
     // Allocates a block of memory for the keys and values.
     static void* _allocate( size_t capacity )
@@ -66,7 +62,12 @@ private:
         delete[] pData;
     }
 
+    void*  _pData;      // Pointer to the allocated memory.
+    size_t _capacity;   // Maximum number of entries that can be stored by _pData.
+    size_t _count;      // Current number of entries that are stored by _pData.
+
     #define _pKeys _keys()
+    #define _pValues _values()
 
     // Gets a pointer to the keys.
     KeyType* _keys()
@@ -79,8 +80,6 @@ private:
     {
         return reinterpret_cast< const KeyType* >( _pData );
     }
-
-    #define _pValues _values()
 
     // Gets a pointer to the values.
     ValueType* _values()
@@ -99,6 +98,8 @@ private:
     {
         new(_pKeys + pos) KeyType( std::move( key ) );
         new(_pValues + pos) ValueType( std::move( value ) );
+        //_pKeys[ pos ] = std::move( key );
+        //_pValues[ pos ] = std::move( value );
     }
 
     // Destroys a key and a value at a specific index in the map.
@@ -119,6 +120,13 @@ public:
     {
     }
 
+    // Clears and deallocates the map.
+    ~Dictionary()
+    {
+        clear();
+        _deallocate( _pData );
+    }
+
     // Allocates memory for the supplied table, plus an optional amount of padding.
     // The provided initializer_list does not need to be in any order, however,
     // supplying duplicate keys will result in undefined behaviour.
@@ -129,27 +137,31 @@ public:
 
         // if the supplied table is already sorted we can skip sorting it later
         bool sorted = true;
-        const EntryType* prev = nullptr;
-        for ( const EntryType& entry : list )
+        const Entry* prev = nullptr;
+        int i = 0;
+        for ( const Entry& entry : list )
         {
             if ( sorted && prev != nullptr && entry.key < prev->key )
                 sorted = false;
-            new( _pKeys + (&entry - list.begin()) ) KeyType( entry.key );
+            new( _pKeys + i++ ) KeyType( entry.key );
             prev = &entry;
         }
 
         if ( sorted )
-        {   // slot the values into place
-            for ( const EntryType& entry : list )
-                new( _pValues + (&entry - list.begin()) ) ValueType( std::move( entry.value ) );
+        {   // index the values into place
+            int i = 0;
+            for ( const Entry& entry : list )
+                new( _pValues + i++ ) ValueType( std::move( entry.value ) );
         }
         else
         {   // sort then search for the correct spot for each value
             std::sort( _pKeys, _pKeys + _count );
-            for ( const EntryType& entry : list )
+            for ( const Entry& entry : list )
                 new( search( entry.key ) ) ValueType( std::move( entry.value ) );
         }
     }
+
+    #pragma region Conversions
 
     // Copies the contents of a map into the constructed map.
     Dictionary( const Dictionary& copy )
@@ -208,12 +220,7 @@ public:
         return *this;
     }
 
-    // Clears and deallocates the map.
-    ~Dictionary()
-    {
-        clear();
-        _deallocate( _pData );
-    }
+    #pragma endregion
 
     // Returns the number of entries in the map.
     size_t count() const
@@ -241,6 +248,18 @@ public:
             _destroy( --_count );
     }
 
+    // Returns true if the pointer belongs to the allocated memory.
+    bool owns( const ValueType* pValue ) const
+    {
+        return _pValues <= pValue && pValue < _pValues + count();
+    }
+
+    // Returns true if the pointer belongs to the allocated memory.
+    bool owns( const KeyType* pKey ) const
+    {
+        return _pKeys <= pKey && pKey < _pKeys + count();
+    }
+
     // Accesses the value mapped to the given key.
     ValueType& operator []( const KeyType& key )
     {
@@ -265,7 +284,7 @@ public:
         while ( lower <= upper )
         {
             if ( *mid < key ) lower = mid + 1;
-        else if ( *mid > key ) upper = mid - 1;
+       else if ( key < *mid ) upper = mid - 1;
             else return Iterator( this, mid );
 
             mid = lower + (upper - lower) / 2;
@@ -278,6 +297,20 @@ public:
     ConstIterator search( KeyType key ) const
     {
         return const_cast< Dictionary* >( this )->search( key );
+    }
+
+    // Matches a value to a key. Returns nullptr if the value is not found.
+    // Best case: O(1) (passed reference is owned by dictionary)
+    // Worst case: O(N) (passed reference not owned by dictionary)
+    const KeyType* reverseSearch( const ValueType& value ) const
+    {
+        if ( owns( &value ) )
+            return _pKeys + std::distance( _pValues, &value );
+        else
+            for ( auto proxy : *this )
+                if ( proxy.value == value )
+                    return &proxy.key;
+        return nullptr;
     }
 
     // Allocates memory, moves entries, then deallocates memory.
@@ -294,7 +327,7 @@ public:
         if ( itr )
             return nullptr;
 
-        return _insert( itr._index( this ), key, std::move( value ) );
+        return _insert( itr._index( this ), std::move( key ), std::move( value ) );
     }
 
     // Removes an entry from the map. Returns true if an entry was found, otherwise false.
@@ -362,8 +395,9 @@ private:
         {
             for ( size_t i = _count; i > pos; --i )
             {
-                _pKeys[ i ]   = move( _pKeys[ i - 1 ] );
-                _pValues[ i ] = move( _pValues[ i - 1 ] );
+                _construct( i,
+                    move( _pKeys[ i - 1 ] ),
+                    move( _pValues[ i - 1 ] ) );
             }
         }
 
@@ -383,8 +417,10 @@ private:
         // Shift chunk of data left when erasing from middle
         for ( size_t i = pos; i < _count - count; ++i )
         {
-            _pKeys[ i ]   = std::move( _pKeys[ i + count ] );
-            _pValues[ i ] = std::move( _pValues[ i + count ] );
+            _destroy( i );
+            _construct( i,
+                std::move( _pKeys[ i + count ] ),
+                std::move( _pValues[ i + count ] ) );
         }
 
         for ( size_t i = _count - count; i < _count; ++i )
@@ -417,11 +453,15 @@ public:
             }
         };
 
+        using DictionaryType = std::conditional_t<
+            std::is_const< ValueType >::value,
+            const Dictionary, Dictionary >;
+
         const KeyType* pKey;
 
-        Dictionary* const _pMap;
+        DictionaryType* const _pMap;
 
-        _iterator( Dictionary* this_map, const KeyType* pKey )
+        _iterator( DictionaryType* this_map, const KeyType* pKey )
             : pKey( pKey )
             , _pMap( this_map )
         {

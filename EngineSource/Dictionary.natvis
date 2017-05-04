@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="Dictionary&lt;*,*&gt;">
+        <DisplayString>{{ size={_count} }}</DisplayString>
+        <Expand>
+            <Item Name="[size]">_count</Item>
+            <Item Name="[capacity]">_capacity</Item>
+            <Synthetic Name="[keys]">
+                <DisplayString>{(KeyType*) _pData}</DisplayString>
+                <Expand>
+                    <ArrayItems>
+                        <Size>_count</Size>
+                        <ValuePointer>(KeyType*) _pData</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="[values]">
+                <DisplayString>{(ValueType*) (((KeyType*) _pData) + _capacity)}</DisplayString>
+                <Expand>
+                    <ArrayItems>
+                        <Size>_count</Size>
+                        <ValuePointer>(ValueType*) (((KeyType*) _pData) + _capacity)</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+    
+</AutoVisualizer>

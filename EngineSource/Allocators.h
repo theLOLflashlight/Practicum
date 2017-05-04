@@ -29,7 +29,7 @@ constexpr Array< T > operator *( Array< T > arr, T* ptr )
 }
 
 // Rounds a size (of memory) up to the smallest multiple of align.
-constexpr size_t round_to_alignment( size_t size, size_t align )
+constexpr size_t round_to_alignment( size_t size, size_t align = sizeof( void* ) )
 {
     return size % align ? size + align - size % align : size;
 }
@@ -63,7 +63,7 @@ class NullAllocator
 {
 public:
 
-    constexpr Blk allocate( size_t )
+    constexpr Blk allocate( size_t ) const
     {
         return { nullptr, 0 };
     }
@@ -73,7 +73,7 @@ public:
         assert( owns( blk.ptr ) );
     }
 
-    constexpr bool owns( void* ptr )
+    constexpr bool owns( void* ptr ) const
     {
         return ptr == nullptr;
     }
@@ -100,12 +100,12 @@ class PolymorphicAllocator
 {
 public:
 
-    Blk allocate( size_t n )
+    Blk allocate( size_t n ) override
     {
         return Allocator::allocate( n );
     }
 
-    void deallocate( Blk b )
+    void deallocate( Blk b ) override
     {
         return Allocator::deallocate( b );
     }
@@ -249,7 +249,7 @@ public:
 
 // Allocates memory from this object to its users. Deallocation is ignored
 // for all but the most recent unit of allocation.
-template< size_t Bytes, size_t Align = sizeof( int ) >
+template< size_t Bytes, size_t Align = sizeof( void* ) >
 class StackAllocator
 {
 public:
@@ -274,11 +274,11 @@ public:
     void deallocate( Blk blk )
     {
         assert( owns( blk.ptr ) );
-        if ( ((byte*) blk.ptr) + _round_to_aligned( blk.size ) == ptr )
+        if ( (byte*) blk.ptr + _round_to_aligned( blk.size ) == ptr )
             ptr = (byte*) blk.ptr;
     }
 
-    constexpr bool owns( void* ptr )
+    constexpr bool owns( void* ptr ) const
     {
         return memory <= ptr && ptr < memory + SIZE;
     }
@@ -295,7 +295,7 @@ private:
 // Allocates memory from this object to its users. Maps individual allocation
 // units of length Align to bits in a bitset. The overhead cost of this type
 // in bytes is (Bytes / Align / 8) or O(n/8).
-template< size_t Bytes, size_t Align = sizeof( int ) >
+template< size_t Bytes, size_t Align = sizeof( void* ) >
 class BitsetAllocator
 {
 public:
@@ -345,7 +345,7 @@ public:
         _setRange( pos, bitlen, false );
     }
 
-    constexpr bool owns( void* ptr )
+    constexpr bool owns( void* ptr ) const
     {
         return memory <= ptr && ptr < memory + SIZE;
     }

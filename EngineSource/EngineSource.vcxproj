@@ -18,33 +18,77 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Allocators.h" />
+    <ClInclude Include="Animation.h" />
+    <ClInclude Include="ArrayBase.h" />
+    <ClInclude Include="Astar.h" />
+    <ClInclude Include="AudioEngine.h" />
+    <ClInclude Include="ComponentManager.h" />
+    <ClInclude Include="ControllerManager.h" />
+    <ClInclude Include="Dictionary.h" />
+    <ClInclude Include="Drawable.h" />
+    <ClInclude Include="Entity.h" />
+    <ClInclude Include="EntityId.h" />
+    <ClInclude Include="glhelp.h" />
+    <ClInclude Include="HashMap.h" />
+    <ClInclude Include="HashSet.h" />
+    <ClInclude Include="InputManager.h" />
+    <ClInclude Include="LocalVector.h" />
+    <ClInclude Include="lodepng.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Observer.h" />
+    <ClInclude Include="LocalQuadTree.h" />
+    <ClInclude Include="QuadTree.h" />
+    <ClInclude Include="random.h" />
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="SparseArray.h" />
+    <ClInclude Include="SparseBucketArray.h" />
+    <ClInclude Include="Texture.h" />
+    <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="Util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AudioEngine.cpp" />
+    <ClCompile Include="EntityId.cpp" />
+    <ClCompile Include="lodepng.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="random.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Dictionary.natvis" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6197C6F2-235F-482D-9A29-70D71124D899}</ProjectGuid>
-    <RootNamespace>Practicum</RootNamespace>
+    <ProjectGuid>{DCC18486-A107-4E88-BC31-206C5293AA2E}</ProjectGuid>
+    <RootNamespace>AppleSauceGame</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>EngineSource</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -69,54 +113,79 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)libs;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <IncludePath>$(ProjectDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)libs;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <TargetName>applesauce</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)libs;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <IncludePath>$(ProjectDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)libs;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <TargetName>applesauce</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)libs;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(ProjectDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)libs;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <TargetName>applesauce</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)libs;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(ProjectDir)includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)libs;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <TargetName>applesauce</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <DisableSpecificWarnings>4838;4244;4305</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <BrowseInformation>true</BrowseInformation>
+      <DisableSpecificWarnings>4305;4244;4838;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(SolutionDir)dll\*.DLL" "$(SolutionDir)$(Configuration)" /D /K /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy DLLs to Target Directory</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4305;4244;4838;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(SolutionDir)dll\*.DLL" "$(SolutionDir)$(Configuration)" /D /K /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy DLLs to Target Directory</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -126,6 +195,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4305;4244;4838;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -134,10 +206,12 @@
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(SolutionDir)dll\*.DLL" "$(SolutionDir)$(Configuration)" /D /K /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy DLLs to Target Directory</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,6 +221,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4305;4244;4838;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -155,17 +232,14 @@
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;opengl32.lib;glew32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(SolutionDir)dll\*.DLL" "$(SolutionDir)$(Configuration)" /D /K /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy DLLs to Target Directory</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\AppleSauce\EngineSource\EngineSource.vcxproj">
-      <Project>{dcc18486-a107-4e88-bc31-206c5293aa2e}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

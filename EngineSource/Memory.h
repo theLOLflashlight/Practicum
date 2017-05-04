@@ -35,6 +35,11 @@ struct Blk
     {
     }
 
+    constexpr explicit operator void*() const
+    {
+        return ptr;
+    }
+
     template< typename T, size_t N >
     Blk( T (&)[ N ] ) = delete;
 
@@ -44,6 +49,11 @@ struct Blk
         std::memset( ptr, val, size );
     }
 };
+
+void* get_ptr( const Blk& blk )
+{
+    return blk.ptr;
+}
 
 // Represents an array of units of allocated memory.
 template< typename T >

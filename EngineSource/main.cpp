@@ -1,17 +1,13 @@
 // Andrew Meckling
 
-#ifdef _DEBUG
 #define SDL_MAIN_HANDLED
-#endif
-
-#include "SceneManager.h"
-#include "InputManager.h"
 
 #include <SDL/SDL.h>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
 #include <cstdio>
+#include <ctime>
 
 SDL_Window* create_window( const char* title, int width, int height );
 
@@ -25,7 +21,7 @@ namespace _game
 
 int main( int argc, char* argv[] )
 {
-    printf( "Hello Practicum!\n" );
+    srand( (unsigned) time( 0 ) );
 
     if ( SDL_Init( SDL_INIT_EVERYTHING ) != 0 )
     {
@@ -41,57 +37,15 @@ int main( int argc, char* argv[] )
     const int width = 800;
     const int height = 600;
 
-    SDL_Window* pWindow = create_window( "Practicum", width, height );
-
-    InputManager inputManager;
-    SceneManager sceneManager;
+    SDL_Window* pWindow = create_window( "AppleSawce", width, height );
 
     // Game loop.
     while ( _game::running )
     {
-        int frameStart = SDL_GetTicks();
-
-        // Tick.
-        {
-            inputManager.pollEvents();
-
-            sceneManager.update( frameStart );
-            sceneManager.render();
-
-            //audioEngine.update();
-
-            glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-            glViewport( 0, 0, width, height );
-            glClear( GL_COLOR_BUFFER_BIT );
-
-            if ( Scene* top = sceneManager.topScene() )
-            {
-                glBindFramebuffer( GL_READ_FRAMEBUFFER, top->framebuffer.frame );
-                glReadBuffer( GL_COLOR_ATTACHMENT0 );
-
-                glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
-                GLenum drawbuf = GL_COLOR_ATTACHMENT0;
-                glDrawBuffers( 1, &drawbuf );
-
-                glBlitFramebuffer(
-                    0, 0, top->width, top->height,
-                    0, 0, width, height,
-                    GL_COLOR_BUFFER_BIT,
-                    GL_NEAREST );
-            }
-        }
-        
-
-        // Cap framerate at 60fps
-        int frameEnd = SDL_GetTicks();
-        int frameTime_ms = (frameEnd - frameStart);
-
-        if ( frameTime_ms <= _game::target_frame_time_ms )
-            SDL_Delay( _game::target_frame_time_ms - frameTime_ms );
-        else
-            printf( "Frame %ims slow\n", frameTime_ms - _game::target_frame_time_ms );
-
-        SDL_GL_SwapWindow( pWindow );
+        SDL_Event event;
+        SDL_PollEvent( &event );
+        if ( event.type == SDL_QUIT )
+            _game::running = false;
     }
 
     SDL_DestroyWindow( pWindow );
@@ -102,9 +56,9 @@ int main( int argc, char* argv[] )
 SDL_Window* create_window( const char* title, int width, int height )
 {
     // Request minimum version for compatibility.
-    if ( SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 ) )
+    if ( SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 ) )
         printf( "SDL_GL_SetAttribute failed: %s.\n", SDL_GetError() );
-    if ( SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 3 ) )
+    if ( SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 0 ) )
         printf( "SDL_GL_SetAttribute failed: %s.\n", SDL_GetError() );
     if ( SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE ) )
         printf( "SDL_GL_SetAttribute failed: %s.\n", SDL_GetError() );

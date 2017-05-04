@@ -12,6 +12,21 @@
 GLuint load_shaders( const char* vertexFilePath,
                      const char* fragmentFilePath );
 
+struct VertexAttribute
+{
+    GLenum  type;
+    GLint   size;
+    GLsizei width;
+};
+
+template< typename ValueT >
+constexpr VertexAttribute attribute( int size )
+{
+    return VertexAttribute {
+        gl_type_constant< ValueT >(),
+        size, GLsizei( sizeof( ValueT ) * size )
+    };
+}
 
 template< typename T >
 constexpr GLenum gl_type_constant( T = {} );
