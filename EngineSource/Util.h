@@ -28,7 +28,7 @@ using glm::ivec4;
 std::forward< std::remove_reference_t< decltype( ARG ) > >( ARG )
 
 #define COALESCE_NULL( MAYBE_NULL, NOT_NULL ) \
-[&]( auto&& ptr ) { return !!ptr ? *ptr : NOT_NULL; }( MAYBE_NULL )
+[&]( auto&& ptr ) -> decltype(auto) { return !!ptr ? *ptr : NOT_NULL; }( MAYBE_NULL )
 
 const auto fn_always_true = []( auto&&... ) { return true; };
 const auto fn_always_false = []( auto&&... ) { return false; };
@@ -45,6 +45,16 @@ struct interp_linear_t
         return a + (frac * (b - a));
     }
 };
+
+constexpr float operator "" f( unsigned long long num )
+{
+    return (float) num;
+}
+
+constexpr double operator "" d( unsigned long long num )
+{
+    return (double) num;
+}
 
 template< typename T, size_t SIZE >
 using RefArray = std::array< std::reference_wrapper< T >, SIZE >;

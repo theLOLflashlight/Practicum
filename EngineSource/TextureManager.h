@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 
 // Maximum number of available texture units.
-// Indexes passed to odin::load_texture(...) must be smaller than this.
+// Indexes passed to load_texture(...) must be smaller than this.
 constexpr int NUM_TEX_UNITS = GL_MAX_TEXTURE_UNITS - GL_TEXTURE0;
 
 // Loads a PNG file into the specified texture unit.
