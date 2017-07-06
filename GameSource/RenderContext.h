@@ -83,6 +83,11 @@ public:
         glUniform( uMatrix, mtx );
     }
 
+    void useClear( const glm::vec4& color )
+    {
+        glClearColor( color.r, color.g, color.b, color.a );
+    }
+
     void useTranslation( const glm::vec2& off )
     {
         using namespace glm;

@@ -446,6 +446,21 @@ public:
         return _currKeys[ key_index( key ) ];
     }
 
+    bool isCtrlDown() const
+    {
+        return isKeyDown( SDLK_LCTRL ) || isKeyDown( SDLK_RCTRL );
+    }
+
+    bool isShiftDown() const
+    {
+        return isKeyDown( SDLK_LSHIFT ) || isKeyDown( SDLK_RSHIFT );
+    }
+
+    bool isAltDown() const
+    {
+        return isKeyDown( SDLK_LALT ) || isKeyDown( SDLK_RALT );
+    }
+
 	// Returns a negative or positive mouse wheel value. Positive is up, negative is down
 	int mouseWheelPos() const
 	{
@@ -572,6 +587,21 @@ public:
     bool isKeyDown( SDL_Keycode key ) const
     {
         return _input().isKeyDown( key );
+    }
+
+    bool isCtrlDown() const
+    {
+        return _input().isCtrlDown();
+    }
+
+    bool isShiftDown() const
+    {
+        return _input().isShiftDown();
+    }
+
+    bool isAltDown() const
+    {
+        return _input().isAltDown();
     }
 
     // Returns a negative or positive mouse wheel value. Positive is up, negative is down

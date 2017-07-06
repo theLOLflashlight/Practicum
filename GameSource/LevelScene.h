@@ -157,7 +157,7 @@ public:
         };
     }
 
-    glm::vec2 randomPos( TileType mustBe )
+    glm::vec2 randomPos( Tile mustBe )
     {
         glm::vec2 pos;
         do {
@@ -187,7 +187,7 @@ public:
             //d.visible = false;
 
             attach( player, move( d ) );
-            attach( player, randomPos( TileType::FLOOR ) );
+            attach( player, randomPos( Tile::FLOOR ) );
             attach( player, glm::vec4( 0, 0, 4, 4 ) );
 
             //detachAll( player );
@@ -233,7 +233,7 @@ public:
             id.texture = 7;
 
             attach( item, move( id ) );
-            attach( item, randomPos( TileType::FLOOR ) );
+            attach( item, randomPos( Tile::FLOOR ) );
             attach( item, SpriteInfo( 4, 3, 8, 22 ) );
             attach( item, Collectible {
                 [&]( Entity& ntt, glm::vec2 pos ) {
@@ -246,17 +246,17 @@ public:
 
         for ( int x = 0; x < FACELET_X; ++x )
         for ( int y = 0; y < FACELET_Y; ++y )
-        facelets[ x ][ y ].eachTile( [&]( TileType tile, SmartTexture& tex, ... )
+        facelets[ x ][ y ].eachTile( [&]( Tile tile, SmartTexture& tex, ... )
         {
             switch ( tile )
             {
-            case TileType::FLOOR:
+            case Tile::FLOOR:
                 tex.initialOffset = { 0, 3 + 3 * char( (x + y) % 4 ) };
                 break;
-            case TileType::WALL:
+            case Tile::WALL:
                 tex.initialOffset = { 0, 3 + 3 * char( (x + y) % 4 ) };
                 break;
-            case TileType::PIT:
+            case Tile::PIT:
                 tex.initialOffset = { 0, 8 };
                 break;
             }
@@ -318,7 +318,7 @@ public:
     }
 
 
-    TileType* findTile( int x, int y )
+    Tile* findTile( int x, int y )
     {
         if ( x < 0 || y < 0 || x >= TILE_COL_COUNT || y >= TILE_ROW_COUNT )
             return nullptr;
@@ -329,27 +329,27 @@ public:
                   .tiles[ pos.tile.x ][ pos.tile.y ];
     }
 
-    TileType getTile( int x, int y )
+    Tile getTile( int x, int y )
     {
-        TileType* pTile = findTile( x, y );
-        return pTile ? *pTile : TileType::NONE;
+        Tile* pTile = findTile( x, y );
+        return pTile ? *pTile : Tile::NONE;
     }
 
-    TileType getTile( glm::vec2 pos )
+    Tile getTile( glm::vec2 pos )
     {
         return getTile( (int) pos.x + TILE_OFF_X, (int) pos.y + TILE_OFF_Y );
     }
 
-    void setTile( int x, int y, TileType type )
+    void setTile( int x, int y, Tile type )
     {
-        if ( TileType* pTile = findTile( x, y ) )
+        if ( Tile* pTile = findTile( x, y ) )
         {
             _dirtyTiles = *pTile != type;
             *pTile = type;
         }
     }
 
-    void setTile( glm::vec2 pos, TileType type )
+    void setTile( glm::vec2 pos, Tile type )
     {
         setTile( (int) pos.x + TILE_OFF_X, (int) pos.y + TILE_OFF_Y, type );
     }
@@ -417,9 +417,9 @@ public:
 
                 auto tilePos = pos + direction_offset( DIRECTIONS[ (int) tex.y ] );
 
-                TileType tileType = TileType::FLOOR;
-                if ( getTile( tilePos ) == TileType::FLOOR )
-                    tileType = TileType::WALL;
+                Tile tileType = Tile::FLOOR;
+                if ( getTile( tilePos ) == Tile::FLOOR )
+                    tileType = Tile::WALL;
 
                 setTile( tilePos, tileType );
                 playSound( "Audio/click.wav", glm::vec3( tilePos, 0 ) / 5.0f );
@@ -486,13 +486,13 @@ public:
 
         for ( int x = 0; x < FACELET_X; ++x )
         for ( int y = 0; y < FACELET_Y; ++y )
-            facelets[ x ][ y ].eachTile( [&]( TileType tile, SmartTexture& texture, int x2, int y2 )
+            facelets[ x ][ y ].eachTile( [&]( Tile tile, SmartTexture& texture, int x2, int y2 )
             {
                 static const TextureOffset* const OFFSETS[] {
                     FLOOR_OFFSETS, WALL_OFFSETS, PIT_OFFSETS
                 };
 
-                if ( tile == TileType::NONE )
+                if ( tile == Tile::NONE )
                     return;
 
                 const int tileInt = (int) tile - 1;
@@ -663,11 +663,11 @@ bool PlayerView::moveDirection( AdjDirection dir )
     auto& pos = pScene->get< glm::vec2 >( player );
     auto off = pos + direction_offset( dir );
 
-    TileType tile = pScene->getTile(
+    Tile tile = pScene->getTile(
         (int) off.x + LevelScene::TILE_OFF_X,
         (int) off.y + LevelScene::TILE_OFF_Y );
 
-    if ( tile == TileType::FLOOR )
+    if ( tile == Tile::FLOOR )
     {
         pos = off;
         return true;

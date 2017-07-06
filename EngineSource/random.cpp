@@ -62,5 +62,6 @@ double rand_real( double min, double max )
 
 bool chance( double ratio )
 {
-    return rand_real() < ratio;
+    return (rand_int( INT_MAX ) / (float) INT_MAX) < ratio;
+    //return rand_real() < ratio;
 }

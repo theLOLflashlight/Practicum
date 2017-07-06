@@ -28,7 +28,7 @@ struct Rollable : Dice
     int add;
 
     constexpr Rollable( const Dice& dice, int add = 0 )
-        : Dice { dice }
+        : Dice( dice )
         , add { add }
     {
     }

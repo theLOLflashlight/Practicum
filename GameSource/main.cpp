@@ -4,7 +4,8 @@
 
 #include "LevelScene.h"
 
-#include "EditScene.h"
+#include "DungeonScene.h"
+#include "DungeonEditScene.h"
 
 #include "SceneManager.h"
 #include "InputManager.h"
@@ -79,19 +80,20 @@ int main( int argc, char* argv[] )
     const int screen_width = DM.w;
     const int screen_height = DM.h;
 
-    const int width = 32 * LevelScene::FACELET_W * LevelScene::FACELET_X;
-    const int height = 32 * LevelScene::FACELET_H * LevelScene::FACELET_Y;
+    const int width = 1280;
+    const int height = 720;
 
     SDL_Window* pWindow = create_window( "Rynth", width, height );
 
     SceneManager sceneManager;
     AudioEngine::init();
 
-    LevelScene levelScene( pWindow );
-    EditScene editScene( pWindow );
-
+    //LevelScene levelScene( pWindow );
     //sceneManager.pushScene( &levelScene );
-    sceneManager.pushScene( &editScene );
+
+    //DungeonScene dungeonScene( pWindow );
+    DungeonEditScene dungeonScene( pWindow );
+    sceneManager.pushScene( &dungeonScene );
 
     // Game loop.
     while ( _game::running )

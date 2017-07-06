@@ -31,6 +31,7 @@
     <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityId.h" />
     <ClInclude Include="glhelp.h" />
+    <ClInclude Include="GlTextureManager.h" />
     <ClInclude Include="HashMap.h" />
     <ClInclude Include="HashSet.h" />
     <ClInclude Include="InputManager.h" />
@@ -44,6 +45,7 @@
     <ClInclude Include="random.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="Set.h" />
     <ClInclude Include="SparseArray.h" />
     <ClInclude Include="SparseBucketArray.h" />
     <ClInclude Include="Texture.h" />

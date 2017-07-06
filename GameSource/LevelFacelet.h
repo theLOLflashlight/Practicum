@@ -24,9 +24,9 @@ public:
     static constexpr int WIDTH = Width;
     static constexpr int HEIGHT = Height;
 
-    static constexpr TileType VOID_TILE = TileType::NONE;
+    static constexpr Tile VOID_TILE = Tile::NONE;
 
-    using TileCol = std::array< TileType, HEIGHT >;
+    using TileCol = std::array< Tile, HEIGHT >;
     using TextureCol = std::array< SmartTexture, HEIGHT >;
 
     std::array< TileCol, WIDTH > tiles;
@@ -48,10 +48,10 @@ public:
         {
             for ( int y = 0; y < HEIGHT; ++y )
             {
-                TileType& tile = tiles[ x ][ y ];
+                Tile& tile = tiles[ x ][ y ];
                 
                 int key = (rand() % 9) < 5 ? 0 : 1;
-                tile = TileType( 1 + key );
+                tile = Tile( 1 + key );
 
                 SmartTexture& texture = textures[ x ][ y ];
                 texture.mask = MASKS[ (int) tile ];
@@ -100,13 +100,13 @@ public:
         return p;
     }
 
-    TileType& getTile( int x, int y )
+    Tile& getTile( int x, int y )
     {
         ivec2 i = adjIdx( x, y );
         return tiles[ i.x, i.y ];
     }
 
-    TileType& getTexture( int x, int y )
+    Tile& getTexture( int x, int y )
     {
         ivec2 i = adjIdx( x, y );
         return textures[ i.x, i.y ];
@@ -134,14 +134,14 @@ public:
 
             for ( int y = 0; y < HEIGHT; ++y )
             {
-                TileType northTile = y > 0 ? col[ y - 1 ]
+                Tile northTile = y > 0 ? col[ y - 1 ]
                     : northFacelet != nullptr ? northFacelet->tiles[ x ][ HEIGHT - 1 ]
                         : VOID_TILE;
-                TileType southTile = y + 1 < HEIGHT ? col[ y + 1 ]
+                Tile southTile = y + 1 < HEIGHT ? col[ y + 1 ]
                     : southFacelet != nullptr ? southFacelet->tiles[ x ][ 0 ]
                         : VOID_TILE;
 
-                TileType tile = tiles[ x ][ y ];
+                Tile tile = tiles[ x ][ y ];
                 SmartTexture& texture = textures[ x ][ y ];
 
                 texture[ WEST ]  = tile == westCol[ y ];

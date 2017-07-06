@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\Engineer.png" />
+    <Image Include="Textures\Fonts\Expire.png" />
     <Image Include="Textures\Mage.png" />
     <Image Include="Textures\Paladin.png" />
     <Image Include="Textures\Rogue.png" />
@@ -33,14 +34,17 @@
     <Image Include="Textures\Warrior.png" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Player.h" />
     <ClInclude Include="Dice.h" />
     <ClInclude Include="Dungeon.h" />
-    <ClInclude Include="EditScene.h" />
+    <ClInclude Include="DungeonEditScene.h" />
+    <ClInclude Include="DungeonScene.h" />
     <ClInclude Include="LevelFacelet.h" />
     <ClInclude Include="LevelScene.h" />
     <ClInclude Include="RenderContext.h" />
     <ClInclude Include="Rubiks.h" />
     <ClInclude Include="SmartTexture.h" />
+    <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="TextureOffsets.h" />
   </ItemGroup>
   <ItemGroup>

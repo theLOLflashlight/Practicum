@@ -14,3 +14,11 @@ double rand_real( double max );
 double rand_real( double min, double max );
 
 bool chance( double ratio );
+
+template< typename... Choices >
+auto rand_choice( Choices&&... choices )
+{
+    auto choice_list = { choices... };
+    auto itr = choice_list.begin();
+    return *(itr + rand_int( sizeof...(Choices) ));
+}

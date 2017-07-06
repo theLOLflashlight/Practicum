@@ -20,6 +20,10 @@ enum TextureId
     ROGUE,
     MAGE,
     PALADIN,
+
+    FONT1,
+
+    ELEMENTAL,
 };
 
 const glm::vec2 TEXTURE_SIZE[]
@@ -34,11 +38,15 @@ const glm::vec2 TEXTURE_SIZE[]
     { 64, 64 },
     { 64, 64 },
     { 64, 64 },
+    // Fonts
+    { 855, 9 },
+    // Enemies
+    { 128, 176 },
     // Other
 
 };
 
-enum class TileType
+enum class Tile
 {
     NONE, FLOOR, WALL, PIT
 };
@@ -133,8 +141,8 @@ struct LevelTile
         EMPTY1, EMPTY2, EMPTY3,
         ICE1, ICE2, ICE3,
         WATER1, WATER2, WATER3,
-        POISON1, POISON2, POISON3,
-        WAVES1, WAVES2, WAVES3,
+        ACID1, ACID2, ACID3,
+        FIRE1, WATER4, ACID4,
     };
 
     static ivec2 pit_offset( Pit flav )
@@ -143,31 +151,31 @@ struct LevelTile
         {
             { 0, 0 },
             // EMPTY
-            { 0, 3 },
+            { 0, 2 },
+            { 0, 4 },
             { 0, 6 },
-            { 0, 9 },
             // ICE
+            { 0, 8 },
+            { 0, 10 },
             { 0, 12 },
-            { 0, 15 },
-            { 0, 18 },
             // WATER
-            { 0, 21 },
-            { 0, 24 },
-            { 0, 27 },
+            { 0, 14 },
+            { 0, 16 },
+            { 0, 18 },
             // POISON
-            { 0, 30 },
-            { 0, 33 },
-            { 0, 36 },
+            { 0, 20 },
+            { 0, 22 },
+            { 0, 24 },
             // WAVES
-            { 0, 39 },
-            { 0, 42 },
-            { 0, 45 },
+            { 0, 26 },
+            { 0, 28 },
+            { 0, 30 },
         };
         return OFFSET[ flav ];
     }
 
-    TileType tileType;
-    ivec2    category;
+    Tile tileType;
+    ivec2 offset;
     std::bitset< 8 > connections;
 
     union {
@@ -176,27 +184,27 @@ struct LevelTile
         Pit   pitFlavor;
     };
 
-    explicit LevelTile( TileType type = TileType::NONE,
+    explicit LevelTile( Tile type = Tile::NONE,
                         ivec2 offset = { 0, 0 } )
         : tileType { type }
-        , category { offset }
+        , offset { offset }
     {
     }
 
     LevelTile( Floor flav )
-        : LevelTile( TileType::FLOOR, floor_offset( flav ) )
+        : LevelTile( Tile::FLOOR, floor_offset( flav ) )
     {
         floorFlavor = flav;
     }
 
     LevelTile( Wall flav )
-        : LevelTile( TileType::WALL, wall_offset( flav ) )
+        : LevelTile( Tile::WALL, wall_offset( flav ) )
     {
         wallFlavor = flav;
     }
 
     LevelTile( Pit flav )
-        : LevelTile( TileType::PIT, pit_offset( flav ) )
+        : LevelTile( Tile::PIT, pit_offset( flav ) )
     {
         pitFlavor = flav;
     }
@@ -211,12 +219,35 @@ struct LevelTile
         return connections.test( dir );
     }
 
+    bool allConnects( std::initializer_list< AdjDirection > il ) const
+    {
+        for ( AdjDirection dir : il )
+            if ( !connections.test( dir ) )
+                return false;
+        return true;
+    }
+
+    bool noneConnects( std::initializer_list< AdjDirection > il ) const
+    {
+        for ( AdjDirection dir : il )
+            if ( connections.test( dir ) )
+                return false;
+        return true;
+    }
+
+    bool shouldConnect( const LevelTile& tile ) const
+    {
+        if ( tileType != Tile::FLOOR && tile.tileType == Tile::NONE  )
+            return true;
+        return tileType == tile.tileType;
+    }
+
     template< typename List >
     void updateConnections( List&& adjs )
     {
         int dir = 0;
-        for ( LevelTile& tile : adjs )
-            connections[ dir++ ] = tileType == tile.tileType;
+        for ( const LevelTile& tile : adjs )
+            connections[ dir++ ] = shouldConnect( tile );
     }
 
     TextureId getTexture() const
@@ -233,8 +264,8 @@ struct LevelTile
         };
 
         int index = connections.to_ulong() & BITMASKS[ (int) tileType ];
-        TextureOffset offset = OFFSETS[ (int) tileType ][ index ];
-        return vec4( category + ivec2( offset.x, offset.y ), 1, 1 ) * 16f;
+        TextureOffset off = OFFSETS[ (int) tileType ][ index ];
+        return vec4( offset + ivec2( off.x, off.y ), 1, 1 ) * 16f;
     }
 };
 
@@ -254,11 +285,24 @@ public:
     Room( const Room& copy )
         : Room( copy.width(), copy.height() )
     {
-        for ( int i = 0; i < copy.numTiles(); ++i )
+        for ( int i = 0; i < numTiles(); ++i )
             tiles[ i ] = copy.tiles[ i ];
     }
 
     Room( Room&& ) = default;
+
+    Room& operator =( const Room& copy )
+    {
+        size = copy.size;
+        tiles = std::make_unique< LevelTile[] >( numTiles() );
+
+        for ( int i = 0; i < numTiles(); ++i )
+            tiles[ i ] = copy.tiles[ i ];
+
+        return *this;
+    }
+
+    Room& operator =( Room&& ) = default;
 
     int numTiles() const
     {
@@ -307,8 +351,8 @@ class Dungeon
         {
         }
 
-        DungeonRoom( Room room, vec2 pos = { 0, 0 } )
-            : Room( move( room ) )
+        DungeonRoom( const Room& room, vec2 pos = { 0, 0 } )
+            : Room( room )
             , pos { pos }
         {
         }
@@ -316,7 +360,144 @@ class Dungeon
 
     std::vector< DungeonRoom > rooms;
 
+    ivec2 _pos;
+    ivec2 _size;
+
 public:
+
+    size_t roomCount() const
+    {
+        return rooms.size();
+    }
+
+    int calculateWidth() const
+    {
+        int maxWidth = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int width = room.width() + rpos.x;
+            if ( width > maxWidth )
+                maxWidth = width;
+        } );
+
+        return maxWidth;
+    }
+
+    int calculateHeight() const
+    {
+        int maxHeight = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int height = room.height() + rpos.y;
+            if ( height > maxHeight )
+                maxHeight = height;
+        } );
+
+        return maxHeight;
+    }
+
+    ivec2 calculateDimensions() const
+    {
+        int maxWidth = 0;
+        int maxHeight = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int width = room.width() + rpos.x;
+            if ( width > maxWidth )
+                maxWidth = width;
+
+            int height = room.height() + rpos.y;
+            if ( height > maxHeight )
+                maxHeight = height;
+        } );
+
+        return { maxWidth, maxHeight };
+    }
+
+    int calculateX() const
+    {
+        int minX = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int x = rpos.x;
+            if ( x < minX )
+                minX = x;
+        } );
+
+        return minX;
+    }
+
+    int calculateY() const
+    {
+        int minY = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int y = rpos.y;
+            if ( y < minY )
+                minY = y;
+        } );
+
+        return minY;
+    }
+
+    ivec2 calculatePos() const
+    {
+        int minX = 0;
+        int minY = 0;
+
+        eachRoom( [&]( const Room& room, vec2 rpos )
+        {
+            int x = rpos.x;
+            if ( x < minX )
+                minX = x;
+
+            int y = rpos.y;
+            if ( y < minY )
+                minY = y;
+        } );
+
+        return { minX, minY };
+    }
+
+    int width() const
+    {
+        return _size.x;
+    }
+
+    int height() const
+    {
+        return _size.y;
+    }
+
+    ivec2 dimensions() const
+    {
+        return _size;
+    }
+
+    int posX() const
+    {
+        return _pos.x;
+    }
+
+    int posY() const
+    {
+        return _pos.y;
+    }
+
+    ivec2 position() const
+    {
+        return _pos;
+    }
+
+    ivec4 rect() const
+    {
+        return ivec4( position(), dimensions() );
+    }
 
     LevelTile& getTile( int x, int y )
     {
@@ -338,9 +519,59 @@ public:
         return nullptr;
     }
 
+    const LevelTile* findTile( int x, int y ) const
+    {
+        return const_cast< Dungeon& >( *this ).findTile( x, y );
+    }
+
+
     void addRoom( Room room, vec2 pos = { 0, 0 } )
     {
+        int width = room.width() + pos.x;
+        int height = room.height() + pos.y;
+        int x = pos.x;
+        int y = pos.y;
+
+        if ( width > _size.x )
+            _size.x = width;
+
+        if ( height > _size.y )
+            _size.y = height;
+
+        if ( x < _pos.x )
+            _pos.x = x;
+
+        if ( y < _pos.y )
+            _pos.y = y;
+
         rooms.emplace_back( move( room ), pos );
+    }
+
+    void removeRoom( Room& room )
+    {
+        for ( uint i = 0; i < rooms.size(); ++i )
+        {
+            if ( &rooms[ i ] == &room )
+            {
+                int width = room.width() + rooms[ i ].pos.x;
+                int height = room.height() + rooms[ i ].pos.y;
+                bool recalcDims = width == _size.x || height == _size.y;
+
+                int x = rooms[ i ].pos.x;
+                int y = rooms[ i ].pos.y;
+                bool recalcPos = x == _pos.x || y == _pos.y;
+
+                rooms.erase( rooms.begin() + i );
+
+                if ( recalcDims )
+                    _size = calculateDimensions();
+
+                if ( recalcPos )
+                    _pos = calculatePos();
+
+                break;
+            }
+        }
     }
 
     template< typename Func >
@@ -348,6 +579,13 @@ public:
     {
         for ( DungeonRoom& room : rooms )
             func( (Room&) room, room.pos );
+    }
+
+    template< typename Func >
+    void eachRoom( Func&& func ) const
+    {
+        for ( const DungeonRoom& room : rooms )
+            func( (const Room&) room, room.pos );
     }
 
     void settleRooms()

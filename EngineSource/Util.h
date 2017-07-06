@@ -51,7 +51,17 @@ constexpr float operator "" f( unsigned long long num )
     return (float) num;
 }
 
+constexpr float operator "" F( unsigned long long num )
+{
+    return (float) num;
+}
+
 constexpr double operator "" d( unsigned long long num )
+{
+    return (double) num;
+}
+
+constexpr double operator "" D( unsigned long long num )
 {
     return (double) num;
 }
@@ -85,12 +95,14 @@ inline glm::vec2 midpoint( glm::vec2 a, glm::vec2 b )
     return (a + b) / 2.f;
 }
 
-inline glm::vec2 flip_x( glm::vec2 v )
+template< typename T, glm::precision P >
+glm::tvec2< T, P > flip_x( const glm::tvec2< T, P > v )
 {
     return { -v.x, v.y };
 }
 
-inline glm::vec2 flip_y( glm::vec2 v )
+template< typename T, glm::precision P >
+glm::tvec2< T, P > flip_y( const glm::tvec2< T, P > v )
 {
     return { v.x, -v.y };
 }
@@ -201,12 +213,12 @@ inline float random( float min, float max )
 template< typename Itr >
 Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
 {
-    auto lower = first;
-    auto upper = last;
+    Itr lower = first;
+    Itr upper = last;
 
     while ( lower <= upper )
     {
-        auto midle = lower + (upper - lower) / 2;
+        Itr midle = lower + (upper - lower) / 2;
 
         if ( *midle < target )
             lower = midle + 1;
@@ -219,8 +231,8 @@ Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
     return last;
 }
 
-template< typename Cont, typename T >
-auto binary_search( Cont& cont, const T& target )
+template< typename Cont >
+auto binary_search( Cont& cont, const decltype( *std::begin( cont ) ) target )
 {
     return binary_search( std::begin( cont ), std::end( cont ), target );
 }
