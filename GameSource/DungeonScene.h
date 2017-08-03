@@ -80,58 +80,63 @@ using DungeonComponentManager = ComponentManager< 1000,
 class DungeonPlayer
     : public PlayerGlue
 {
-    EntityId eid;
+    Eid eid = -1;
     DungeonComponentManager* pComps;
 
 public:
 
-    DungeonPlayer( EntityId eid, DungeonComponentManager& comps )
-        : eid { eid }
+    DungeonPlayer() = default;
+
+    explicit DungeonPlayer( DungeonComponentManager& comps )
+        : eid { comps.newEntity() }
         , pComps { &comps }
     {
-        Entity& ntt = pComps->getEntity( eid );
-        pComps->attach( ntt, Position {} );
-        pComps->attach( ntt, HitPoints {} );
-        pComps->attach( ntt, Texture {} );
-        pComps->attach( ntt, Stats {} );
-        pComps->attach( ntt, Animation {} );
-		pComps->attach( ntt, Action {} );
+        comps.attach( eid, Position {} );
+        comps.attach( eid, HitPoints {} );
+        comps.attach( eid, Texture {} );
+        comps.attach( eid, Stats {} );
+        comps.attach( eid, Animation {} );
+        comps.attach( eid, Action {} );
+    }
 
+    ~DungeonPlayer()
+    {
+        pComps->deleteEntity( eid );
     }
 
     Position& position() override
     {
-        return pComps->get< Position >( entity() );
+        return pComps->get< Position >( eid );
     }
 
     HitPoints& health() override
     {
-        return pComps->get< HitPoints >( entity() );
+        return pComps->get< HitPoints >( eid );
     }
 
     Texture& texture() override
     {
-        return pComps->get< Texture >( entity() );
+        return pComps->get< Texture >( eid );
     }
 
     Stats& stats() override
     {
-        return pComps->get< Stats >( entity() );
+        return pComps->get< Stats >( eid );
     }
 
     Animation& animation() override
     {
-        return pComps->get< Animation >( entity() );
+        return pComps->get< Animation >( eid );
     }
 
-	Action& action() override
-	{
-		return pComps->get< Action >( entity() );
-	}
-
-    Entity& entity() override
+    Action& action() override
     {
-        return pComps->getEntity( eid );
+        return pComps->get< Action >( eid );
+    }
+
+    Eid id() override
+    {
+        return eid;
     }
 };
 
@@ -184,48 +189,58 @@ public:
     static constexpr LevelTile::Wall WALL_TILE = LevelTile::Wall::BRICK3;
     static constexpr LevelTile::Pit PIT_TILE = LevelTile::Pit::WATER1;
 
-    explicit DungeonScene( SDL_Window* pWindow )
-        : Scene( pWindow )
-        , player { DungeonPlayer( getId( newEntity() ), *this ) }
-    {
-    }
-
 protected:
 
     Dungeon dungeon;
 
-    Player player;
+    DungeonPlayer player;
 
-	int	currCharacterIndex = 0;
-	std::vector< EntityId > characters;
+    int    currCharacterIndex = 0;
+    std::vector< Eid > characters;
 
-	void nextCharacter()
-	{
-		++currCharacterIndex %= characters.size();
-	}
+public:
 
-	Entity& currentCharacter()
-	{
-		return getEntity( characters[ currCharacterIndex ] );
-		/*return currCharacterIndex < characters.size()
-			? findEntity( characters[ currCharacterIndex ] )
-			: nullptr;*/
-	}
-
-    RefVector< Entity > entitiesOnTile( LevelTile* pTile )
+    explicit DungeonScene( SDL_Window* pWindow )
+        : Scene( pWindow )
+        , player { *this }
     {
-        RefVector< Entity > ntts;
-        Position tilePos = glm::round( dungeon.tilePos( pTile ) );
-
-        invokeSystem( [&]( Entity& ntt, Position pos ) {
-            if ( glm::round( pos ) == flip_y( tilePos * TILE_SIZE ) )
-                ntts.push_back( ntt );
-        } );
-
-        return ntts;
+        Eid pid = player.id();
+        attach( pid, Position {} );
+        attach( pid, HitPoints {} );
+        attach( pid, Texture {} );
+        attach( pid, Stats {} );
+        attach( pid, Animation {} );
+        attach( pid, Action {} );
     }
 
-    void moveEntity( Entity& ntt, LevelTile* pTile )
+protected:
+
+    void nextCharacter()
+    {
+        ++currCharacterIndex %= characters.size();
+    }
+
+    Eid currentCharacter()
+    {
+        return characters[ currCharacterIndex ];
+        /*return currCharacterIndex < characters.size()
+            ? characters[ currCharacterIndex ] : -1;*/
+    }
+
+    std::vector< Eid > entitiesOnTile( LevelTile* pTile )
+    {
+        std::vector< Eid > eids;
+        Position tilePos = glm::round( dungeon.tilePos( pTile ) );
+
+        invokeSystem( [&]( Eid eid, Position pos ) {
+            if ( glm::round( pos ) == flip_y( tilePos * TILE_SIZE ) )
+                eids.push_back( eid );
+        } );
+
+        return eids;
+    }
+
+    void moveEntity( Eid eid, LevelTile* pTile )
     {
         if ( pTile == nullptr )
             return;
@@ -234,11 +249,11 @@ protected:
 
         vec2 tilePos = dungeon.tilePos( pTile );
 
-        if ( hasAttached< Stats >( ntt ) )
+        if ( hasAttached< Stats >( eid ) )
         {
-            Stats& nttStats = get< Stats >( ntt );
+            Stats& nttStats = get< Stats >( eid );
 
-            for ( Entity& tileNtt : entitiesOnTile( pTile ) )
+            for ( Eid tileNtt : entitiesOnTile( pTile ) )
             {
                 invokeProcess( tileNtt, [&]( Position& pos, Stats& stats )
                 {
@@ -254,10 +269,10 @@ protected:
             }
         }
 
-        if ( !blockMove && hasAttached< Position >( ntt ) )
+        if ( !blockMove && hasAttached< Position >( eid ) )
         {
-            posTweens.push_back( PositionTween(
-                getId( ntt ), flip_y( tilePos * TILE_SIZE ), prevTicks, 200 ) );
+            posTweens.push_back( PositionTween( eid,
+                flip_y( tilePos * TILE_SIZE ), prevTicks, 200 ) );
         }
     }
 
@@ -271,13 +286,13 @@ protected:
         {
             bool blockMove = pTile->tileType != Tile::FLOOR;
 
-            invokeSystem( [&]( Entity& ntt, Position pos, Stats& stats )
+            invokeSystem( [&]( Eid eid, Position pos, Stats& stats )
             {
                 if ( pos / TILE_SIZE == sum && (player.stats().blocks & stats.blocks) != 0 )
                 {
                     blockMove = true;
-                    if ( hasAttached< HitPoints >( ntt ) )
-                        basicAttack( player.entity(), ntt );
+                    if ( hasAttached< HitPoints >( eid ) )
+                        basicAttack( player.id(), eid );
                 }
             } );
 
@@ -285,7 +300,7 @@ protected:
             {
                 //playerPos += delta;
                 posTweens.push_back( PositionTween(
-                    getId( player.entity() ),
+                    player.id(),
                     playerPos + delta,
                     prevTicks, 200 ) );
 
@@ -295,7 +310,7 @@ protected:
                         player.texture().spriteView.x = floor( frac * 4 ) * TILE_SIZE;
                     } };
             }
-			player.action() = Action( [] { return ActionResult( false ); } );
+            player.action() = Action( [] { return ActionResult( false ); } );
         }
         // Movement not allowed.
     }
@@ -322,7 +337,7 @@ protected:
         player.texture().spriteView.y = dir * TILE_SIZE;
     }
 
-    void basicAttack( Entity& attacker, Entity& defender )
+    void basicAttack( Eid attacker, Eid defender )
     {
         #define CHECK match_signature< Position, Stats, HitPoints >
 
@@ -485,34 +500,32 @@ protected:
         useSize( TEXTURE_SIZE[ texture ] );
     }
 
-    Entity& spawnEnemy( Position pos, Stats stats, Texture tex )
+    Eid spawnEnemy( Position pos, Stats stats, Texture tex )
     {
-        Entity& ntt = newEntity();
-        attach( ntt, pos );
-        attach( ntt, stats );
-        attach( ntt, tex );
-        attach( ntt, stats.maxHealth );
-		attach( ntt, Action { [&, eid = getId( ntt )]
-		{
-			if ( chance( 0.02 ) )
-			{
-				Entity& ntt = getEntity( eid );
+        Eid eid = newEntity();
+        attach( eid, pos );
+        attach( eid, stats );
+        attach( eid, tex );
+        attach( eid, stats.maxHealth );
+        attach( eid, Action { [&, eid]
+        {
+            if ( chance( 0.02 ) )
+            {
+                static const vec2 VECTORS[]
+                {
+                    { 1, 0 },{ -1, 0 },{ 0, 1 },{ 0, -1 }
+                };
 
-				static const vec2 VECTORS[]
-				{
-					{ 1, 0 },{ -1, 0 },{ 0, 1 },{ 0, -1 }
-				};
+                vec2 delta = VECTORS[ rand_int( 3 ) ];
+                vec2 pos = get< Position >( eid ) / TILE_SIZE + delta;
+                //vec2 pos = randTilePos( Tile::FLOOR ) / TILE_SIZE;
+                moveEntity( eid, dungeon.findTile( pos.x, -pos.y ) );
 
-				vec2 delta = VECTORS[ rand_int( 3 ) ];
-				vec2 pos = get< Position >( ntt ) / TILE_SIZE + delta;
-				//vec2 pos = randTilePos( Tile::FLOOR ) / TILE_SIZE;
-				moveEntity( ntt, dungeon.findTile( pos.x, -pos.y ) );
-
-				return ActionResult( true );
-			}
-			return ActionResult( false );
-		} } );
-        return ntt;
+                return ActionResult( true );
+            }
+            return ActionResult( false );
+        } } );
+        return eid;
     }
 
     Position randTilePos( Tile tile ) const
@@ -584,18 +597,22 @@ public:
         eliminateSingleWalls();
         initExtras();
 
-        player.stats() = WARRIOR_STATS;
-        player.health() = WARRIOR_STATS.maxHealth;
-        player.position() = randTilePos( Tile::FLOOR );
-        player.texture() = WARRIOR_TEX;
-		
-		characters.push_back( getId( player.entity() ) );
+        invokeProcess( player.id(),
+            [&]( Stats& stats, HitPoints& hp, Position& pos, Texture& tex )
+        {
+            stats = WARRIOR_STATS;
+            hp = WARRIOR_STATS.maxHealth;
+            pos = randTilePos( Tile::FLOOR );
+            tex = WARRIOR_TEX;
+        } );
+
+        characters.push_back( player.id() );
 
         static constexpr Stats ENEMY_STATS { 10, 3, 3, 2, Obstruction::GROUND };
 
         for ( int i = 0; i < 5; ++i )
-			characters.push_back( getId( spawnEnemy(
-                randTilePos( Tile::FLOOR ), ENEMY_STATS, BEHOLDER_TEX ) ) );
+            characters.push_back( spawnEnemy(
+                randTilePos( Tile::FLOOR ), ENEMY_STATS, BEHOLDER_TEX ) );
 
         // Load textures.
         GLuint tex0 = load_texture< GLubyte[ 4 ] >( DEFAULT, 1, 1, { 0xff, 0xff, 0xff, 0xff } );
@@ -642,7 +659,7 @@ public:
 
         // Only allow player input if not tweening.
         if ( none_of( posTweens,
-                     [eid = getId( player.entity() )]( PositionTween& tween ) {
+                     [eid = player.id()]( PositionTween& tween ) {
                          return eid == tween.eid;
                      } ) )
         {
@@ -655,25 +672,25 @@ public:
             player.texture().spriteView.x = 0;
 
             if ( keys[ 0 ] )
-				player.action() = Action( [&] {
-					movePlayer( vec2( TILE_SIZE, 0 ) );
-					return ActionResult( true );
-				} );
+                player.action() = Action( [&] {
+                    movePlayer( vec2( TILE_SIZE, 0 ) );
+                    return ActionResult( true );
+                } );
             if ( keys[ 1 ] )
-				player.action() = Action( [&] {
-					movePlayer( vec2( -TILE_SIZE, 0 ) );
-					return ActionResult( true );
-				} );
+                player.action() = Action( [&] {
+                    movePlayer( vec2( -TILE_SIZE, 0 ) );
+                    return ActionResult( true );
+                } );
             if ( keys[ 2 ] )
-				player.action() = Action( [&] {
-					movePlayer( vec2( 0, -TILE_SIZE ) );
-					return ActionResult( true );
-				} );
+                player.action() = Action( [&] {
+                    movePlayer( vec2( 0, -TILE_SIZE ) );
+                    return ActionResult( true );
+                } );
             if ( keys[ 3 ] )
-				player.action() = Action( [&] {
-					movePlayer( vec2( 0, TILE_SIZE ) );
-					return ActionResult( true );
-				} );
+                player.action() = Action( [&] {
+                    movePlayer( vec2( 0, TILE_SIZE ) );
+                    return ActionResult( true );
+                } );
 
             if ( keys.none() )
                 player.animation().updateFn = nullptr;
@@ -684,33 +701,33 @@ public:
                 movementBuffer = keys;
         }
 
-		invokeProcess( currentCharacter(), [&]( Action& action )
-		{
-			while ( 1 )
-			{
-				ActionResult result = action.perform();
+        invokeProcess( currentCharacter(), [&]( Action& action )
+        {
+            while ( 1 )
+            {
+                ActionResult result = action.perform();
 
-				if ( !result.succeeded )
-					return;
+                if ( !result.succeeded )
+                    return;
 
-				if ( !!result.backupAction )
-					break;
+                if ( !!result.backupAction )
+                    break;
 
-				action = move( result.backupAction );
-			}
+                action = move( result.backupAction );
+            }
 
-			nextCharacter();
-		} );
+            nextCharacter();
+        } );
 
         // Update animations.
-        invokeSystem( [&]( Entity&, Animation& anim ) {
+        invokeSystem( [&]( Eid, Animation& anim ) {
             anim.update( ticks );
         } );
 
         // Perform tweens.
         for ( auto& tween : posTweens )
         {
-            tween( ticks, get< Position >( getEntity( tween.eid ) ) );
+            tween( ticks, get< Position >( tween.eid ) );
         }
 
         // Remove expired tweeners.
@@ -722,22 +739,21 @@ public:
         {
             // Can't add or remove entities while invoking a system
             // so we store the ids in a temporary array.
-            std::vector< EntityId > deadEntities;
+            std::vector< Eid > deadEntities;
 
-            invokeSystem( [&]( Entity& ntt, HitPoints& hp )
+            invokeSystem( [&]( Eid eid, HitPoints& hp )
             {
                 if ( hp <= 0 )
-                    deadEntities.push_back( getId( ntt ) );
+                    deadEntities.push_back( eid );
             } );
 
-            for ( EntityId eid : deadEntities )
+            for ( Eid eid : deadEntities )
             {
-                Entity& ntt = getEntity( eid );
                 deleteEntity( eid );
-                remove_elements( characters, [eid]( EntityId nmeid ) {
+                remove_elements( characters, [eid]( Eid nmeid ) {
                     return nmeid == eid;
                 } );
-				currCharacterIndex %= characters.size();
+                currCharacterIndex %= characters.size();
             }
         }
 
@@ -786,7 +802,7 @@ public:
             }
         }
 
-        invokeSystem( [&]( Entity& ntt, Position pos, Texture tex )
+        invokeSystem( [&]( Eid eid, Position pos, Texture tex )
         {
             useTexture( (TextureId) tex.textureUnit );
             useSprite( tex.spriteView );
@@ -796,10 +812,10 @@ public:
         } );
 
         // Draw healthbars
-        Entity* pPlayerNtt = &player.entity();
-        invokeSystem( [&]( Entity& ntt, Position pos, HitPoints hp, Stats stats )
+        Eid playerId = player.id();
+        invokeSystem( [&]( Eid eid, Position pos, HitPoints hp, Stats stats )
         {
-            if ( pPlayerNtt == &ntt )
+            if ( playerId == eid )
                 return;
 
             useTexture( DEFAULT );

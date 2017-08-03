@@ -41,7 +41,6 @@
     <ClInclude Include="DungeonEditScene.h" />
     <ClInclude Include="DungeonScene.h" />
     <ClInclude Include="LevelFacelet.h" />
-    <ClInclude Include="LevelScene.h" />
     <ClInclude Include="RenderContext.h" />
     <ClInclude Include="Rubiks.h" />
     <ClInclude Include="SmartTexture.h" />

@@ -37,15 +37,15 @@ struct Action
 
     ActionResult perform();
 
-	Action( std::function< ActionResult() > func = nullptr )
-		: fnAction{ move ( func ) }
-	{
-	}
+    Action( std::function< ActionResult() > func = nullptr )
+        : fnAction { move ( func ) }
+    {
+    }
 
-	operator bool() const
-	{
-		return fnAction == nullptr;
-	}
+    operator bool() const
+    {
+        return fnAction == nullptr;
+    }
 };
 
 struct ActionResult
@@ -53,16 +53,16 @@ struct ActionResult
     bool   succeeded;
     Action backupAction;
 
-	explicit ActionResult( bool success, Action backup = {} )
-		: succeeded { success }
-		, backupAction { move( backup ) }
-	{
-	}
+    explicit ActionResult( bool success, Action backup = {} )
+        : succeeded { success }
+        , backupAction { move( backup ) }
+    {
+    }
 };
 
 ActionResult Action::perform()
 {
-	return fnAction ? fnAction() : ActionResult( true );
+    return fnAction ? fnAction() : ActionResult( true );
 }
 
 class PlayerGlue
@@ -85,11 +85,11 @@ public:
 
     virtual Stats& stats() = 0;
 
-	virtual Animation& animation() = 0;
+    virtual Animation& animation() = 0;
 
-	virtual Action& action() = 0;
+    virtual Action& action() = 0;
 
-    virtual Entity& entity() = 0;
+    virtual Eid id() = 0;
 };
 
 class Player
@@ -97,6 +97,8 @@ class Player
     std::unique_ptr< PlayerGlue > glue;
 
 public:
+
+    Player() = default;
 
     template< typename Glue >
     Player( const Glue& glue )
@@ -114,9 +116,9 @@ public:
     PLAYER_FUNC( health );
     PLAYER_FUNC( texture );
     PLAYER_FUNC( stats );
-	PLAYER_FUNC( animation );
-	PLAYER_FUNC( action );
-    PLAYER_FUNC( entity );
+    PLAYER_FUNC( animation );
+    PLAYER_FUNC( action );
+    PLAYER_FUNC( id );
     
     #undef PLAYER_FUNC
 };

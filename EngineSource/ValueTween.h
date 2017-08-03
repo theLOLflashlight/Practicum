@@ -41,11 +41,11 @@ struct ValueTweener
 template< typename T >
 struct TweenEntry : ValueTweener< T >
 {
-    EntityId eid;
+    int eid;
 
     TweenEntry() = default;
 
-    TweenEntry( EntityId eid, T target, uint start, uint duration )
+    TweenEntry( int eid, T target, uint start, uint duration )
         : ValueTweener< T >( start, duration, move( target ) )
         , eid( eid )
     {

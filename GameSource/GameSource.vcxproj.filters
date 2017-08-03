@@ -44,9 +44,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LevelScene.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Rubiks.h">
       <Filter>Header Files</Filter>
     </ClInclude>

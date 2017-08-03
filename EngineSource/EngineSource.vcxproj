@@ -25,6 +25,7 @@
     <ClInclude Include="AudioEngine.h" />
     <ClInclude Include="ComponentManager.h" />
     <ClInclude Include="ControllerManager.h" />
+    <ClInclude Include="Delay.h" />
     <ClInclude Include="Dictionary.h" />
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="Entity.h" />

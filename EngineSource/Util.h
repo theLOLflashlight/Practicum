@@ -222,6 +222,8 @@ inline float random( float min, float max )
     return min + (r * (max - min));
 }
 
+// Performs a binary search over the range. Returns an iterator to 
+// the matched element on success; end() on failure.
 template< typename Itr >
 Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
 {
@@ -243,10 +245,44 @@ Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
     return last;
 }
 
+// Performs a binary search over the range. Returns an iterator to 
+// the matched element on success; end() on failure.
 template< typename Cont >
 auto binary_search( Cont& cont, const decltype( *std::begin( cont ) ) target )
 {
     return binary_search( std::begin( cont ), std::end( cont ), target );
+}
+
+// Performs a binary search over the range. Returns an iterator to 
+// the matched element on success; or the nearest element on failure.
+template< typename Itr >
+Itr binary_search2( Itr first, Itr last, const decltype( *first ) target )
+{
+    Itr lower = first;
+    Itr upper = last;
+    Itr midle = lower + (upper - lower) / 2;
+
+    while ( lower <= upper )
+    {
+        if ( *midle < target )
+            lower = midle + 1;
+        else if ( target < *midle )
+            upper = midle - 1;
+        else
+            return midle;
+
+        midle = lower + (upper - lower) / 2;
+    }
+
+    return midle;
+}
+
+// Performs a binary search over the range. Returns an iterator to 
+// the matched element on success; or the nearest element on failure.
+template< typename Cont >
+auto binary_search2( Cont& cont, const decltype( *std::begin( cont ) ) target )
+{
+    return binary_search2( std::begin( cont ), std::end( cont ), target );
 }
 
 template< typename T >
