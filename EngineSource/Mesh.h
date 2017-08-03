@@ -16,7 +16,7 @@ struct Mesh
     Mesh() = default;
 
     template< typename Vertex >
-	Mesh( const Vertex* pVertices, int count,
+    Mesh( const Vertex* pVertices, int count,
           std::initializer_list< VertexAttribute > attrs,
           GLenum mode = GL_TRIANGLES )
         : mode( mode )
@@ -68,7 +68,16 @@ struct Mesh
         return *this;
     }
 
-	static Mesh make_rect( float width, float height, glm::vec2 tex = { 1, 1 } )
+    Mesh copy() const
+    {
+        Mesh m;
+        m.mode = mode;
+        m.count = count;
+        glGenVertexArrays( 1, &m.vertexArray );
+        glBindVertexArray( m.vertexArray );
+    }
+
+    static Mesh make_rect( float width, float height, glm::vec2 tex = { 1, 1 } )
     {
         float x = tex.x;
         float y = tex.y;
@@ -80,7 +89,7 @@ struct Mesh
             { +width / 2, +height / 2,   x, 0 },
         };
             
-		return Mesh( vertices, 4, {
+        return Mesh( vertices, 4, {
             attribute< float >( 2 ),
             attribute< float >( 2 )
         }, GL_TRIANGLE_FAN );
@@ -130,7 +139,7 @@ struct Mesh
             { -length / 2, -h / 3,  0, 1 },
         };
 
-		return Mesh( vertices, 3, {
+        return Mesh( vertices, 3, {
             attribute< float >( 2 ),
             attribute< float >( 2 )
         } );

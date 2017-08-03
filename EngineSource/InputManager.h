@@ -347,9 +347,9 @@ public:
                 break;
             }
             case SDL_CONTROLLERAXISMOTION:
-			{
+            {
                 SDL_JoyAxisEvent& jaxis = event.jaxis;
-				int playerNo = gamepads.findPlayerIndex( jaxis.which );
+                int playerNo = gamepads.findPlayerIndex( jaxis.which );
 
                 if ( playerNo == -1 )
                     break;
@@ -366,8 +366,8 @@ public:
                 {
                     gamepads.triggerAxis[ playerNo ][ jaxis.axis % 2 ] = jaxis.value / 32767.f;
                 }
-				break;
-			}
+                break;
+            }
             case SDL_CONTROLLERBUTTONDOWN:
             case SDL_CONTROLLERBUTTONUP:
             {
@@ -461,11 +461,11 @@ public:
         return isKeyDown( SDLK_LALT ) || isKeyDown( SDLK_RALT );
     }
 
-	// Returns a negative or positive mouse wheel value. Positive is up, negative is down
-	int mouseWheelPos() const
-	{
-		return _currMouse.wheel;
-	}
+    // Returns a negative or positive mouse wheel value. Positive is up, negative is down
+    int mouseWheelPos() const
+    {
+        return _currMouse.wheel;
+    }
 
     // Returns a bitset indicating if the supplied keys were pressed.
     template< typename... Keys >

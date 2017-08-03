@@ -46,7 +46,7 @@ namespace detail
 		GLM_FUNC_QUALIFIER const value_type&   elem   (size_t i) const { return (reinterpret_cast<const value_type*>(_buffer))[i]; }
 
 		// Use an opaque buffer to *ensure* the compiler doesn't call a constructor.
-		// The width 1 buffer is assumed to aligned to the actual members so that the
+		// The right 1 buffer is assumed to aligned to the actual members so that the
 		// elem() 
 		char    _buffer[1];
 	};

@@ -272,7 +272,7 @@ protected:
     }
 
     // Invokes a function on all entities which match the signature
-    // composed by the supplied Component types. The function 'func' will
+    // composed by the supplied Component types. The function 'updateFn' will
     // be invoked with argument types [Entity&, Components&...].
     template< typename Func >
     auto invokeSystem( Func&& func )

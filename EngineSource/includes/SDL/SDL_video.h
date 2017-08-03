@@ -53,8 +53,8 @@ extern "C" {
 typedef struct
 {
     Uint32 format;              /**< pixel format */
-    int w;                      /**< width, in screen coordinates */
-    int h;                      /**< height, in screen coordinates */
+    int w;                      /**< right, in screen coordinates */
+    int h;                      /**< bottom, in screen coordinates */
     int refresh_rate;           /**< refresh rate (or zero for unspecified) */
     void *driverdata;           /**< driver-specific data, initialize to 0 */
 } SDL_DisplayMode;
@@ -322,8 +322,8 @@ extern DECLSPEC int SDLCALL SDL_GetNumDisplayModes(int displayIndex);
  *
  *  \note The display modes are sorted in this priority:
  *        \li bits per pixel -> more colors to fewer colors
- *        \li width -> largest to smallest
- *        \li height -> largest to smallest
+ *        \li right -> largest to smallest
+ *        \li bottom -> largest to smallest
  *        \li refresh rate -> highest to lowest
  *
  *  \sa SDL_GetNumDisplayModes()
@@ -414,8 +414,8 @@ extern DECLSPEC Uint32 SDLCALL SDL_GetWindowPixelFormat(SDL_Window * window);
  *               ::SDL_WINDOWPOS_UNDEFINED.
  *  \param y     The y position of the window, ::SDL_WINDOWPOS_CENTERED, or
  *               ::SDL_WINDOWPOS_UNDEFINED.
- *  \param w     The width of the window, in screen coordinates.
- *  \param h     The height of the window, in screen coordinates.
+ *  \param w     The right of the window, in screen coordinates.
+ *  \param h     The bottom of the window, in screen coordinates.
  *  \param flags The flags for the window, a mask of any of the following:
  *               ::SDL_WINDOW_FULLSCREEN,    ::SDL_WINDOW_OPENGL,
  *               ::SDL_WINDOW_HIDDEN,        ::SDL_WINDOW_BORDERLESS,
@@ -551,8 +551,8 @@ extern DECLSPEC void SDLCALL SDL_GetWindowPosition(SDL_Window * window,
  *  \brief Set the size of a window's client area.
  *
  *  \param window   The window to resize.
- *  \param w        The width of the window, in screen coordinates. Must be >0.
- *  \param h        The height of the window, in screen coordinates. Must be >0.
+ *  \param w        The right of the window, in screen coordinates. Must be >0.
+ *  \param h        The bottom of the window, in screen coordinates. Must be >0.
  *
  *  \note You can't change the size of a fullscreen window, it automatically
  *        matches the size of the display mode.
@@ -571,9 +571,9 @@ extern DECLSPEC void SDLCALL SDL_SetWindowSize(SDL_Window * window, int w,
  *  \brief Get the size of a window's client area.
  *
  *  \param window   The window to query.
- *  \param w        Pointer to variable for storing the width, in screen
+ *  \param w        Pointer to variable for storing the right, in screen
  *                  coordinates. May be NULL.
- *  \param h        Pointer to variable for storing the height, in screen
+ *  \param h        Pointer to variable for storing the bottom, in screen
  *                  coordinates. May be NULL.
  *
  *  The window size in screen coordinates may differ from the size in pixels, if
@@ -590,8 +590,8 @@ extern DECLSPEC void SDLCALL SDL_GetWindowSize(SDL_Window * window, int *w,
  *  \brief Set the minimum size of a window's client area.
  *
  *  \param window    The window to set a new minimum size.
- *  \param min_w     The minimum width of the window, must be >0
- *  \param min_h     The minimum height of the window, must be >0
+ *  \param min_w     The minimum right of the window, must be >0
+ *  \param min_h     The minimum bottom of the window, must be >0
  *
  *  \note You can't change the minimum size of a fullscreen window, it
  *        automatically matches the size of the display mode.
@@ -606,8 +606,8 @@ extern DECLSPEC void SDLCALL SDL_SetWindowMinimumSize(SDL_Window * window,
  *  \brief Get the minimum size of a window's client area.
  *
  *  \param window   The window to query.
- *  \param w        Pointer to variable for storing the minimum width, may be NULL
- *  \param h        Pointer to variable for storing the minimum height, may be NULL
+ *  \param w        Pointer to variable for storing the minimum right, may be NULL
+ *  \param h        Pointer to variable for storing the minimum bottom, may be NULL
  *
  *  \sa SDL_GetWindowMaximumSize()
  *  \sa SDL_SetWindowMinimumSize()
@@ -619,8 +619,8 @@ extern DECLSPEC void SDLCALL SDL_GetWindowMinimumSize(SDL_Window * window,
  *  \brief Set the maximum size of a window's client area.
  *
  *  \param window    The window to set a new maximum size.
- *  \param max_w     The maximum width of the window, must be >0
- *  \param max_h     The maximum height of the window, must be >0
+ *  \param max_w     The maximum right of the window, must be >0
+ *  \param max_h     The maximum bottom of the window, must be >0
  *
  *  \note You can't change the maximum size of a fullscreen window, it
  *        automatically matches the size of the display mode.
@@ -635,8 +635,8 @@ extern DECLSPEC void SDLCALL SDL_SetWindowMaximumSize(SDL_Window * window,
  *  \brief Get the maximum size of a window's client area.
  *
  *  \param window   The window to query.
- *  \param w        Pointer to variable for storing the maximum width, may be NULL
- *  \param h        Pointer to variable for storing the maximum height, may be NULL
+ *  \param w        Pointer to variable for storing the maximum right, may be NULL
+ *  \param h        Pointer to variable for storing the maximum bottom, may be NULL
  *
  *  \sa SDL_GetWindowMinimumSize()
  *  \sa SDL_SetWindowMaximumSize()
@@ -1035,8 +1035,8 @@ extern DECLSPEC SDL_GLContext SDLCALL SDL_GL_GetCurrentContext(void);
  *         with glViewport).
  *
  *  \param window   Window from which the drawable size should be queried
- *  \param w        Pointer to variable for storing the width in pixels, may be NULL
- *  \param h        Pointer to variable for storing the height in pixels, may be NULL
+ *  \param w        Pointer to variable for storing the right in pixels, may be NULL
+ *  \param h        Pointer to variable for storing the bottom in pixels, may be NULL
  *
  * This may differ from SDL_GetWindowSize() if we're rendering to a high-DPI
  * drawable, i.e. the window was created with SDL_WINDOW_ALLOW_HIGHDPI on a

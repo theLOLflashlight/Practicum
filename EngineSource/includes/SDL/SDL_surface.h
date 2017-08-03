@@ -107,8 +107,8 @@ typedef int (*SDL_blit) (struct SDL_Surface * src, SDL_Rect * srcrect,
  *  If the function runs out of memory, it will return NULL.
  *
  *  \param flags The \c flags are obsolete and should be set to 0.
- *  \param width The width in pixels of the surface to create.
- *  \param height The height in pixels of the surface to create.
+ *  \param right The right in pixels of the surface to create.
+ *  \param bottom The bottom in pixels of the surface to create.
  *  \param depth The depth in bits of the surface to create.
  *  \param Rmask The red mask of the surface to create.
  *  \param Gmask The green mask of the surface to create.

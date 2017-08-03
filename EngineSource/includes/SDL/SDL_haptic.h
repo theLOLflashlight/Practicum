@@ -397,7 +397,7 @@ typedef struct _SDL_Haptic SDL_Haptic;
  *   - South:  0, 1, 0
  *   - West:  -1, 0, 0
  *
- *  The Z axis represents the height of the effect if supported, otherwise
+ *  The Z axis represents the bottom of the effect if supported, otherwise
  *  it's unused.  In cartesian encoding (1, 2) would be the same as (2, 4), you
  *  can use any multiple you want, only the direction matters.
  *

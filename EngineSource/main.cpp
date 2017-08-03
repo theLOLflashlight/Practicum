@@ -64,7 +64,7 @@ SDL_Window* create_window( const char* title, int width, int height )
         printf( "SDL_GL_SetAttribute failed: %s.\n", SDL_GetError() );
 
     // Create OpenGL window
-    // SDL_sdlWindowPOS_CENTERED creates window in the center position using given width/height
+    // SDL_sdlWindowPOS_CENTERED creates window in the center position using given right/bottom
     SDL_Window* _sdlWindow = SDL_CreateWindow(
         title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL );
 

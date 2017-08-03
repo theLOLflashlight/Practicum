@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <glm/glm.hpp>
+#include <experimental/generator>
 
 using std::forward;
 using std::move;
@@ -23,6 +24,8 @@ using glm::vec4;
 using glm::ivec2;
 using glm::ivec3;
 using glm::ivec4;
+
+using std::experimental::generator;
 
 #define FORWARD( ARG ) \
 std::forward< std::remove_reference_t< decltype( ARG ) > >( ARG )
@@ -80,14 +83,23 @@ void array_cat( Cont1& cont1, Cont2&& cont2 )
         std::end( forward< Cont2 >( cont2 ) ) );
 }
 
-template< typename Cont, typename Pred >
-void array_remove( Cont& cont, Pred&& pred )
+template< typename T, typename Pred >
+void remove_elements( std::vector< T >& cont, Pred&& pred )
 {
     auto split = std::remove_if(
-        std::begin( cont ), std::end( cont ),
+        cont.begin(), cont.end(),
         forward< Pred >( pred ) );
-
+    
     cont.erase( split, std::end( cont ) );
+
+    //for ( auto it = cont.begin(); it != cont.end(); ++it )
+    //{
+    //    if ( pred( *it ) )
+    //    {
+    //        std::swap( *it, *--std::end( cont ) );
+    //        cont.pop_back();
+    //    }
+    //}
 }
 
 inline glm::vec2 midpoint( glm::vec2 a, glm::vec2 b )
@@ -173,10 +185,10 @@ void destroy( T& t )
 template <typename Comparable>
 Comparable approach(Comparable start, Comparable end, Comparable maxChange)
 {
-	if (start < end)
-		return ::min(start + maxChange, end);
-	else
-		return ::max(start - maxChange, end);
+    if (start < end)
+        return ::min(start + maxChange, end);
+    else
+        return ::max(start - maxChange, end);
 }
 
 // Scales a point (x) by performing the same transformation needed
@@ -199,7 +211,7 @@ constexpr T scale_point_clamp( T x, T minA, T maxA, T minB, T maxB )
 // Returns a random integer between two values
 inline int randomRange(int min, int max)
 {
-	return min + (rand() % (int)(max - min + 1));
+    return min + (rand() % (int)(max - min + 1));
 }
 
 // Returns a random real number between two values
@@ -350,7 +362,7 @@ struct function_traits< ReturnType( Args... ) >
 {
     enum { ARITY = sizeof...(Args) };
 
-    using result_type = ReturnType;
+    using return_type = ReturnType;
 
     using args_tuple = std::tuple< Args... >;
 
@@ -371,6 +383,11 @@ struct is_any< T, First, Rest... >
     : std::integral_constant< bool,
         std::is_same< T, First >::value || is_any< T, Rest... >::value >
 {
+};
+
+enum LoopExitType
+{
+    EXIT_BREAK, EXIT_CONTINUE, EXIT_RETURN
 };
 
 template< typename Range, typename Func >
@@ -437,6 +454,15 @@ bool all( const T& t, std::initializer_list< T > il )
 }
 
 template< typename T >
+bool any( const T& t, std::initializer_list< T > il )
+{
+    for ( T tt : il )
+        if ( t == tt )
+            return true;
+    return false;
+}
+
+template< typename T >
 bool none( const T& t, std::initializer_list< T > il )
 {
     for ( T tt : il )
@@ -444,7 +470,6 @@ bool none( const T& t, std::initializer_list< T > il )
             return false;
     return true;
 }
-
 
 template< size_t N, typename... Args >
 decltype(auto) get_n( Args&&... args )

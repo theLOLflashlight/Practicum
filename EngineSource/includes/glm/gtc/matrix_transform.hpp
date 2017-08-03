@@ -174,7 +174,7 @@ namespace glm
 	/// Creates a matrix for a symetric perspective-view frustum based on the default handedness.
 	/// 
 	/// @param fovy Specifies the field of view angle in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -189,7 +189,7 @@ namespace glm
 	/// Creates a matrix for a right handed, symetric perspective-view frustum.
 	/// 
 	/// @param fovy Specifies the field of view angle, in degrees, in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -204,7 +204,7 @@ namespace glm
 	/// Creates a matrix for a left handed, symetric perspective-view frustum.
 	/// 
 	/// @param fovy Specifies the field of view angle, in degrees, in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -219,8 +219,8 @@ namespace glm
 	/// Builds a perspective projection matrix based on a field of view and the default handedness.
 	/// 
 	/// @param fov Expressed in radians.
-	/// @param width 
-	/// @param height 
+	/// @param right 
+	/// @param bottom 
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -236,8 +236,8 @@ namespace glm
 	/// Builds a right handed perspective projection matrix based on a field of view.
 	/// 
 	/// @param fov Expressed in radians.
-	/// @param width 
-	/// @param height 
+	/// @param right 
+	/// @param bottom 
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -253,8 +253,8 @@ namespace glm
 	/// Builds a left handed perspective projection matrix based on a field of view.
 	/// 
 	/// @param fov Expressed in radians.
-	/// @param width 
-	/// @param height 
+	/// @param right 
+	/// @param bottom 
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param far Specifies the distance from the viewer to the far clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
@@ -270,7 +270,7 @@ namespace glm
 	/// Creates a matrix for a symmetric perspective-view frustum with far plane at infinite.
 	/// 
 	/// @param fovy Specifies the field of view angle, in degrees, in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
 	/// @see gtc_matrix_transform
@@ -281,7 +281,7 @@ namespace glm
 	/// Creates a matrix for a symmetric perspective-view frustum with far plane at infinite for graphics hardware that doesn't support depth clamping.
 	/// 
 	/// @param fovy Specifies the field of view angle, in degrees, in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.
 	/// @see gtc_matrix_transform
@@ -292,7 +292,7 @@ namespace glm
 	/// Creates a matrix for a symmetric perspective-view frustum with far plane at infinite for graphics hardware that doesn't support depth clamping.
 	/// 
 	/// @param fovy Specifies the field of view angle, in degrees, in the y direction. Expressed in radians.
-	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (width) to y (height).
+	/// @param aspect Specifies the aspect ratio that determines the field of view in the x direction. The aspect ratio is the ratio of x (right) to y (bottom).
 	/// @param near Specifies the distance from the viewer to the near clipping plane (always positive).
 	/// @param ep 
 	/// @tparam T Value type used to build the matrix. Currently supported: half (not recommanded), float or double.

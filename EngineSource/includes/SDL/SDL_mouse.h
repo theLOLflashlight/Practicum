@@ -203,7 +203,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_GetRelativeMouseMode(void);
  *  \brief Create a cursor, using the specified bitmap data and
  *         mask (in MSB format).
  *
- *  The cursor width must be a multiple of 8 bits.
+ *  The cursor right must be a multiple of 8 bits.
  *
  *  The cursor is created in black and white according to the following:
  *  <table>

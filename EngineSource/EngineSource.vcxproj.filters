@@ -93,9 +93,6 @@
     <ClInclude Include="ArrayBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Animation.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HashMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -109,6 +106,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GlTextureManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ValueTween.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

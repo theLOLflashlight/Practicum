@@ -331,6 +331,21 @@ public:
         return &tiles[ x + y * width() ];
     }
 
+    bool owns( const LevelTile* pTile ) const
+    {
+        auto* pTiles = tiles.get();
+        return pTile >= pTiles && pTile < pTiles + numTiles(); 
+    }
+
+    ivec2 tilePos( const LevelTile* pTile ) const
+    {
+        if ( !owns( pTile ) )
+            return {};
+
+        int off = pTile - tiles.get();
+        return { off % width(), off / width() };
+    }
+
     template< typename Func >
     void eachTile( Func&& func )
     {
@@ -464,12 +479,12 @@ public:
         return { minX, minY };
     }
 
-    int width() const
+    int right() const
     {
         return _size.x;
     }
 
-    int height() const
+    int bottom() const
     {
         return _size.y;
     }
@@ -479,12 +494,12 @@ public:
         return _size;
     }
 
-    int posX() const
+    int left() const
     {
         return _pos.x;
     }
 
-    int posY() const
+    int top() const
     {
         return _pos.y;
     }
@@ -524,6 +539,15 @@ public:
         return const_cast< Dungeon& >( *this ).findTile( x, y );
     }
 
+    vec2 tilePos( const LevelTile* pTile ) const
+    {
+        for ( const DungeonRoom& room : rooms )
+        {
+            if ( room.owns( pTile ) )
+                return (vec2) room.tilePos( pTile ) + room.pos;
+        }
+        return {};
+    }
 
     void addRoom( Room room, vec2 pos = { 0, 0 } )
     {

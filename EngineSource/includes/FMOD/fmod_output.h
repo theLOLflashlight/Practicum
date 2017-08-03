@@ -168,7 +168,7 @@ struct FMOD_OUTPUT_OBJECT3DINFO
     FMOD_VECTOR     position;       /* [r] Vector relative between object and listener. */
     float           gain;           /* [r] 0.0 to 1.0 - 1 = 'buffer' is not attenuated, 0 = 'buffer' is fully attenuated. */
     float           spread;         /* [r] 0 - 360 degrees.  0 = point source, 360 = sound is spread around all speakers */
-    float           priority;       /* [r] 0.0 to 1.0 - 0 = most important, 1 = least important. Based on height and distance (height is more important). */
+    float           priority;       /* [r] 0.0 to 1.0 - 0 = most important, 1 = least important. Based on bottom and distance (bottom is more important). */
 };
 
 #endif /* _FMOD_OUTPUT_H */

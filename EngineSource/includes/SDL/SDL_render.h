@@ -81,8 +81,8 @@ typedef struct SDL_RendererInfo
     Uint32 flags;               /**< Supported ::SDL_RendererFlags */
     Uint32 num_texture_formats; /**< The number of available texture formats */
     Uint32 texture_formats[16]; /**< The available texture formats */
-    int max_texture_width;      /**< The maximum texture width */
-    int max_texture_height;     /**< The maximum texture height */
+    int max_texture_width;      /**< The maximum texture right */
+    int max_texture_height;     /**< The maximum texture bottom */
 } SDL_RendererInfo;
 
 /**
@@ -161,8 +161,8 @@ extern DECLSPEC int SDLCALL SDL_GetRenderDriverInfo(int index,
 /**
  *  \brief Create a window and default renderer
  *
- *  \param width    The width of the window
- *  \param height   The height of the window
+ *  \param right    The right of the window
+ *  \param bottom   The bottom of the window
  *  \param window_flags The flags used to create the window
  *  \param window   A pointer filled with the window, or NULL on error
  *  \param renderer A pointer filled with the renderer, or NULL on error
@@ -226,11 +226,11 @@ extern DECLSPEC int SDLCALL SDL_GetRendererOutputSize(SDL_Renderer * renderer,
  *  \param renderer The renderer.
  *  \param format The format of the texture.
  *  \param access One of the enumerated values in ::SDL_TextureAccess.
- *  \param w      The width of the texture in pixels.
- *  \param h      The height of the texture in pixels.
+ *  \param w      The right of the texture in pixels.
+ *  \param h      The bottom of the texture in pixels.
  *
  *  \return The created texture is returned, or NULL if no rendering context was
- *          active,  the format was unsupported, or the width or height were out
+ *          active,  the format was unsupported, or the right or bottom were out
  *          of range.
  *
  *  \sa SDL_QueryTexture()
@@ -265,8 +265,8 @@ extern DECLSPEC SDL_Texture * SDLCALL SDL_CreateTextureFromSurface(SDL_Renderer 
  *                 actual format may differ, but pixel transfers will use this
  *                 format.
  *  \param access  A pointer filled in with the actual access to the texture.
- *  \param w       A pointer filled in with the width of the texture in pixels.
- *  \param h       A pointer filled in with the height of the texture in pixels.
+ *  \param w       A pointer filled in with the right of the texture in pixels.
+ *  \param h       A pointer filled in with the bottom of the texture in pixels.
  *
  *  \return 0 on success, or -1 if the texture is not valid.
  */
@@ -467,8 +467,8 @@ extern DECLSPEC SDL_Texture * SDLCALL SDL_GetRenderTarget(SDL_Renderer *renderer
  *  \brief Set device independent resolution for rendering
  *
  *  \param renderer The renderer for which resolution should be set.
- *  \param w      The width of the logical resolution
- *  \param h      The height of the logical resolution
+ *  \param w      The right of the logical resolution
+ *  \param h      The bottom of the logical resolution
  *
  *  This function uses the viewport and scaling functionality to allow a fixed logical
  *  resolution for rendering, regardless of the actual output resolution.  If the actual
@@ -492,8 +492,8 @@ extern DECLSPEC int SDLCALL SDL_RenderSetLogicalSize(SDL_Renderer * renderer, in
  *  \brief Get device independent resolution for rendering
  *
  *  \param renderer The renderer from which resolution should be queried.
- *  \param w      A pointer filled with the width of the logical resolution
- *  \param h      A pointer filled with the height of the logical resolution
+ *  \param w      A pointer filled with the right of the logical resolution
+ *  \param h      A pointer filled with the bottom of the logical resolution
  *
  *  \sa SDL_RenderSetLogicalSize()
  */
@@ -852,8 +852,8 @@ extern DECLSPEC void SDLCALL SDL_DestroyRenderer(SDL_Renderer * renderer);
  *         OpenGL instructions.
  *
  *  \param texture  The SDL texture to bind
- *  \param texw     A pointer to a float that will be filled with the texture width
- *  \param texh     A pointer to a float that will be filled with the texture height
+ *  \param texw     A pointer to a float that will be filled with the texture right
+ *  \param texh     A pointer to a float that will be filled with the texture bottom
  *
  *  \return 0 on success, or -1 if the operation is not supported
  */

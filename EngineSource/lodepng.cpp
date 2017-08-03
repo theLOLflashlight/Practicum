@@ -3177,7 +3177,7 @@ static void rgba16ToPixel(unsigned char* out, size_t i,
     }
 }
 
-/*Get RGBA8 color of pixel with index i (y * width + x) from the raw image with given color type.*/
+/*Get RGBA8 color of pixel with index i (y * right + x) from the raw image with given color type.*/
 static void getPixelColorRGBA8(unsigned char* r, unsigned char* g,
                                 unsigned char* b, unsigned char* a,
                                 const unsigned char* in, size_t i,
@@ -3420,7 +3420,7 @@ static void getPixelColorsRGBA8(unsigned char* buffer, size_t numpixels,
     }
 }
 
-/*Get RGBA16 color of pixel with index i (y * width + x) from the raw image with
+/*Get RGBA16 color of pixel with index i (y * right + x) from the raw image with
 given color type, but the given color type must be 16-bit itself.*/
 static void getPixelColorRGBA16(unsigned short* r, unsigned short* g, unsigned short* b, unsigned short* a,
                                  const unsigned char* in, size_t i, const LodePNGColorMode* mode)
@@ -3846,15 +3846,15 @@ static const unsigned ADAM7_DY[7] = { 8, 8, 8, 4, 4, 2, 2 }; /*y delta values*/
 
                                                              /*
                                                              Outputs various dimensions and positions in the image related to the Adam7 reduced images.
-                                                             passw: output containing the width of the 7 passes
-                                                             passh: output containing the height of the 7 passes
+                                                             passw: output containing the right of the 7 passes
+                                                             passh: output containing the bottom of the 7 passes
                                                              filter_passstart: output containing the index of the start and end of each
                                                              reduced image with filter bytes
                                                              padded_passstart output containing the index of the start and end of each
                                                              reduced image when without filter bytes but with padded scanlines
                                                              passstart: output containing the index of the start and end of each reduced
                                                              image without padding between scanlines, but still padding between the images
-                                                             w, h: width and height of non-interlaced image
+                                                             w, h: right and bottom of non-interlaced image
                                                              bpp: bits per pixel
                                                              "padded" is only relevant if bpp is less than 8 and a scanline or image does not
                                                              end at a full byte
@@ -3865,7 +3865,7 @@ static void Adam7_getpassvalues(unsigned passw[7], unsigned passh[7], size_t fil
     /*the passstart values have 8 values: the 8th one indicates the byte after the end of the 7th (= last) pass*/
     unsigned i;
 
-    /*calculate width and height in pixels of each pass*/
+    /*calculate right and bottom in pixels of each pass*/
     for(i = 0; i != 7; ++i)
     {
         passw[i] = (w + ADAM7_DX[i] - ADAM7_IX[i] - 1) / ADAM7_DX[i];
@@ -4886,8 +4886,8 @@ static unsigned addChunk_IHDR(ucvector* out, unsigned w, unsigned h,
     ucvector header;
     ucvector_init(&header);
 
-    lodepng_add32bitInt(&header, w); /*width*/
-    lodepng_add32bitInt(&header, h); /*height*/
+    lodepng_add32bitInt(&header, w); /*right*/
+    lodepng_add32bitInt(&header, h); /*bottom*/
     ucvector_push_back(&header, (unsigned char)bitdepth); /*bit depth*/
     ucvector_push_back(&header, (unsigned char)colortype); /*color type*/
     ucvector_push_back(&header, 0); /*compression method*/
@@ -5210,7 +5210,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     */
 
     unsigned bpp = lodepng_get_bpp(info);
-    /*the width of a scanline in bytes, not including the filter type*/
+    /*the right of a scanline in bytes, not including the filter type*/
     size_t linebytes = (w * bpp + 7) / 8;
     /*bytewidth is used for filtering, is 1 when bpp < 8, number of bytes per pixel otherwise*/
     size_t bytewidth = (bpp + 7) / 8;

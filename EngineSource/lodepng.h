@@ -105,8 +105,8 @@ After decoding, its size is w * h * (bytes per pixel) bytes larger than
 initially. Bytes per pixel depends on colortype and bitdepth.
 Must be freed after usage with free(*out).
 Note: for 16-bit per channel colors, uses big endian format like PNG does.
-w: Output parameter. Pointer to width of pixel data.
-h: Output parameter. Pointer to height of pixel data.
+w: Output parameter. Pointer to right of pixel data.
+h: Output parameter. Pointer to bottom of pixel data.
 in: Memory buffer with the PNG file.
 insize: size of the in buffer.
 colortype: the desired color type for the raw output image. See explanation on PNG color types.
@@ -156,8 +156,8 @@ Must be freed after usage with free(*out).
 outsize: Output parameter. Pointer to the size in bytes of the out buffer.
 image: The raw pixel data to encode. The size of this buffer should be
 w * h * (bytes per pixel), bytes per pixel depends on colortype and bitdepth.
-w: width of the raw pixel data in pixels.
-h: height of the raw pixel data in pixels.
+w: right of the raw pixel data in pixels.
+h: bottom of the raw pixel data in pixels.
 colortype: the color type of the raw input image. See explanation on PNG color types.
 bitdepth: the bit depth of the raw input image. See explanation on PNG color types.
 Return value: LodePNG error code (0 means no error).
@@ -387,7 +387,7 @@ In detail, it returns true only if it's a color type with alpha, or has a palett
 or if "key_defined" is true.
 */
 unsigned lodepng_can_have_alpha(const LodePNGColorMode* info);
-/*Returns the byte size of a raw image buffer with given width, height and color mode*/
+/*Returns the byte size of a raw image buffer with given right, bottom and color mode*/
 size_t lodepng_get_raw_size(unsigned w, unsigned h, const LodePNGColorMode* color);
 
 #ifdef LODEPNG_COMPILE_ANCILLARY_CHUNKS
@@ -403,7 +403,7 @@ typedef struct LodePNGTime
 } LodePNGTime;
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
 
-/*Information about the PNG image, except pixels, width and height.*/
+/*Information about the PNG image, except pixels, right and bottom.*/
 typedef struct LodePNGInfo
 {
     /*header (IHDR), palette (PLTE) and transparency (tRNS) chunks*/
@@ -653,7 +653,7 @@ unsigned lodepng_decode(unsigned char** out, unsigned* w, unsigned* h,
 
 /*
 Read the PNG header, but not the actual data. This returns only the information
-that is in the header chunk of the PNG, such as width, height and color type. The
+that is in the header chunk of the PNG, such as right, bottom and color type. The
 information is placed in the info_png field of the LodePNGState.
 */
 unsigned lodepng_inspect(unsigned* w, unsigned* h,
@@ -1079,7 +1079,7 @@ namespace lodepng
   --------------------
 
   After decoding, this contains extra information of the PNG image, except the actual
-  pixels, width and height because these are already gotten directly from the decoder
+  pixels, right and bottom because these are already gotten directly from the decoder
   functions.
 
   It contains for example the original color type of the PNG image, text comments,
@@ -1304,7 +1304,7 @@ namespace lodepng
   have a bit amount that isn't a multiple of 8, then padding bits are used so that each
   scanline starts at a fresh byte. But that is NOT true for the LodePNG raw input and output.
   The raw input image you give to the encoder, and the raw output image you get from the decoder
-  will NOT have these padding bits, e.g. in the case of a 1-bit image with a width
+  will NOT have these padding bits, e.g. in the case of a 1-bit image with a right
   of 7 pixels, the first pixel of the second scanline will the the 8th bit of the first byte,
   not the first bit of a new byte.
 
@@ -1526,8 +1526,8 @@ namespace lodepng
 
   //load and decode
   std::vector<unsigned char> image;
-  unsigned width, height;
-  unsigned error = lodepng::decode(image, width, height, filename);
+  unsigned right, bottom;
+  unsigned error = lodepng::decode(image, right, bottom, filename);
 
   //if there's an error, display it
   if(error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
@@ -1544,10 +1544,10 @@ namespace lodepng
   {
   unsigned error;
   unsigned char* image;
-  size_t width, height;
+  size_t right, bottom;
   const char* filename = argc > 1 ? argv[1] : "test.png";
 
-  error = lodepng_decode32_file(&image, &width, &height, filename);
+  error = lodepng_decode32_file(&image, &right, &bottom, filename);
 
   if(error) printf("decoder error %u: %s\n", error, lodepng_error_text(error));
 
@@ -1721,7 +1721,7 @@ namespace lodepng
   *) 09 okt 2006: Encoder class added. It encodes a valid PNG image from the
   given image buffer, however for now it's not compressed.
   *) 08 sep 2006: (!) Changed to interface with a Decoder class
-  *) 30 jul 2006: (!) LodePNG_InfoPng , width and height are now retrieved in different
+  *) 30 jul 2006: (!) LodePNG_InfoPng , right and bottom are now retrieved in different
   way. Renamed decodePNG to decodePNGGeneric.
   *) 29 jul 2006: (!) Changed the interface: image info is now returned as a
   struct of type LodePNG::LodePNG_Info, instead of a vector, which was a bit clumsy.
