@@ -89,16 +89,19 @@ public:
         _count = newSize;
     }
 
-    void insert( decltype( _array.begin() ) where, ValueType value )
+    using iterator = decltype( _array.begin() );
+
+    void insert( iterator where, ValueType value )
     {
-        for ( auto itr = end() - 1; itr >= where; --itr )
-            itr[ 1 ] = move( *itr );
+        if ( size() > 0 )
+            for ( auto itr = end() - 1; itr >= where; --itr )
+                itr[ 1 ] = move( *itr );
 
         *where = move( value );
         ++_count;
     }
 
-    void remove( decltype( _array.begin() ) where )
+    void remove( iterator where )
     {
         for ( auto itr = where; itr != end(); ++itr )
             *itr = move( itr[ 1 ] );

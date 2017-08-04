@@ -193,7 +193,9 @@ protected:
 
     Dungeon dungeon;
 
-    DungeonPlayer player;
+    //DungeonPlayer player;
+
+    Eid playerId;
 
     int    currCharacterIndex = 0;
     std::vector< Eid > characters;
@@ -202,15 +204,14 @@ public:
 
     explicit DungeonScene( SDL_Window* pWindow )
         : Scene( pWindow )
-        , player { *this }
+        , playerId { newEntity() }
     {
-        Eid pid = player.id();
-        attach( pid, Position {} );
-        attach( pid, HitPoints {} );
-        attach( pid, Texture {} );
-        attach( pid, Stats {} );
-        attach( pid, Animation {} );
-        attach( pid, Action {} );
+        attach( playerId, Position {} );
+        attach( playerId, HitPoints {} );
+        attach( playerId, Texture {} );
+        attach( playerId, Stats {} );
+        attach( playerId, Animation {} );
+        attach( playerId, Action {} );
     }
 
 protected:
@@ -278,7 +279,7 @@ protected:
 
     void movePlayer( vec2 delta )
     {
-        auto& playerPos = player.position();
+        auto& playerPos = get< Position >( playerId );
         auto sum = (playerPos + delta) / TILE_SIZE;
         changePlayerDir( delta );
 
@@ -288,11 +289,12 @@ protected:
 
             invokeSystem( [&]( Eid eid, Position pos, Stats& stats )
             {
-                if ( pos / TILE_SIZE == sum && (player.stats().blocks & stats.blocks) != 0 )
+                if ( pos / TILE_SIZE == sum
+                    && (get< Stats >( playerId ).blocks & stats.blocks) != 0 )
                 {
                     blockMove = true;
                     if ( hasAttached< HitPoints >( eid ) )
-                        basicAttack( player.id(), eid );
+                        basicAttack( playerId, eid );
                 }
             } );
 
@@ -300,17 +302,17 @@ protected:
             {
                 //playerPos += delta;
                 posTweens.push_back( PositionTween(
-                    player.id(),
+                    playerId,
                     playerPos + delta,
                     prevTicks, 200 ) );
 
-                Animation& anim = player.animation();
+                Animation& anim = get< Animation >( playerId );
                 if ( anim.updateFn == nullptr )
                     anim = { prevTicks, 400, [&]( float frac ) {
-                        player.texture().spriteView.x = floor( frac * 4 ) * TILE_SIZE;
+                        get< Texture >( playerId ).spriteView.x = floor( frac * 4 ) * TILE_SIZE;
                     } };
             }
-            player.action() = Action( [] { return ActionResult( false ); } );
+            get< Action >( playerId ) = [] { return ActionResult( false ); };
         }
         // Movement not allowed.
     }
@@ -334,7 +336,7 @@ protected:
                 dir = 1;
         }
 
-        player.texture().spriteView.y = dir * TILE_SIZE;
+        get< Texture >( playerId ).spriteView.y = dir * TILE_SIZE;
     }
 
     void basicAttack( Eid attacker, Eid defender )
@@ -597,7 +599,7 @@ public:
         eliminateSingleWalls();
         initExtras();
 
-        invokeProcess( player.id(),
+        invokeProcess( playerId,
             [&]( Stats& stats, HitPoints& hp, Position& pos, Texture& tex )
         {
             stats = WARRIOR_STATS;
@@ -606,7 +608,7 @@ public:
             tex = WARRIOR_TEX;
         } );
 
-        characters.push_back( player.id() );
+        characters.push_back( playerId );
 
         static constexpr Stats ENEMY_STATS { 10, 3, 3, 2, Obstruction::GROUND };
 
@@ -659,8 +661,8 @@ public:
 
         // Only allow player input if not tweening.
         if ( none_of( posTweens,
-                     [eid = player.id()]( PositionTween& tween ) {
-                         return eid == tween.eid;
+                     [&]( PositionTween& tween ) {
+                         return playerId == tween.eid;
                      } ) )
         {
             if ( movementBuffer.any() )
@@ -669,31 +671,31 @@ public:
                 movementBuffer.reset();
             }
 
-            player.texture().spriteView.x = 0;
+            get< Texture >( playerId ).spriteView.x = 0;
 
             if ( keys[ 0 ] )
-                player.action() = Action( [&] {
+                get< Action >( playerId ) = [&] {
                     movePlayer( vec2( TILE_SIZE, 0 ) );
                     return ActionResult( true );
-                } );
+                };
             if ( keys[ 1 ] )
-                player.action() = Action( [&] {
+                get< Action >( playerId ) = [&] {
                     movePlayer( vec2( -TILE_SIZE, 0 ) );
                     return ActionResult( true );
-                } );
+                };
             if ( keys[ 2 ] )
-                player.action() = Action( [&] {
+                get< Action >( playerId ) = [&] {
                     movePlayer( vec2( 0, -TILE_SIZE ) );
                     return ActionResult( true );
-                } );
+                };
             if ( keys[ 3 ] )
-                player.action() = Action( [&] {
+                get< Action >( playerId ) = [&] {
                     movePlayer( vec2( 0, TILE_SIZE ) );
                     return ActionResult( true );
-                } );
+                };
 
             if ( keys.none() )
-                player.animation().updateFn = nullptr;
+                get< Animation >( playerId ).updateFn = nullptr;
         }
         else
         {
@@ -812,7 +814,6 @@ public:
         } );
 
         // Draw healthbars
-        Eid playerId = player.id();
         invokeSystem( [&]( Eid eid, Position pos, HitPoints hp, Stats stats )
         {
             if ( playerId == eid )
@@ -841,12 +842,12 @@ public:
 
         // Draw Player
         {
-            auto& tex = player.texture();
+            auto& tex = get< Texture >( playerId );
             useTextureUnit( tex.textureUnit );
             useSprite( tex.spriteView );
             useSize( tex.size );
             useColor( tex.color );
-            fillRect( player.position(), vec2( TILE_SIZE ) );
+            fillRect( get< Position >( playerId ), vec2( TILE_SIZE ) );
         }
 
         endFrame();

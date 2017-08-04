@@ -30,7 +30,6 @@ struct Stats
 
 struct ActionResult;
 
-
 struct Action
 {
     std::function< ActionResult() > fnAction;
@@ -38,9 +37,16 @@ struct Action
     ActionResult perform();
 
     Action( std::function< ActionResult() > func = nullptr )
-        : fnAction { move ( func ) }
+        : fnAction { move( func ) }
     {
     }
+
+    Action( Action&& action ) = default;
+
+    Action& operator =( const Action& ) = default;
+    Action& operator =( Action&& ) = default;
+
+    Action& operator =( std::function< ActionResult() > func );
 
     operator bool() const
     {
@@ -63,6 +69,12 @@ struct ActionResult
 ActionResult Action::perform()
 {
     return fnAction ? fnAction() : ActionResult( true );
+}
+
+Action& Action::operator =( std::function< ActionResult() > func )
+{
+    fnAction = std::move( func );
+    return *this;
 }
 
 class PlayerGlue

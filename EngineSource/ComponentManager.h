@@ -72,8 +72,7 @@ private:
     Eid _addEntity( Eid eid )
     {
         auto where = binary_search2( _nttIds, eid );
-        if ( *where != eid )
-            _nttIds.insert( where, eid );
+        _nttIds.insert( where, eid );
         return eid;
     }
 
@@ -88,10 +87,14 @@ private:
     // Stores all components of each type.
     ComponentsCollection _components;
 
+    Eid _nextId = 0;
+
     Eid _nextEid()
     {
+        return _nextId++; // @Temporary
+
         for ( auto itr = _nttIds.begin() + 1; itr < _nttIds.end(); ++itr )
-            if ( itr[ -1 ] != *itr - 1 )
+            if ( itr[ -1 ] + 1 != *itr )
                 return itr[ -1 ] + 1;
 
         return _nttIds.size();
