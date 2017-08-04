@@ -7,6 +7,7 @@
 #include <array>
 #include <initializer_list>
 #include <cassert>
+#include <experimental/generator>
 
 template< uint64_t X = 5381, uint64_t Y = 33 >
 constexpr uint64_t myHash( const char* s, int off = 0 )
@@ -119,7 +120,7 @@ public:
         : table( size_t( std::size( il ) * factor ) )
     {
         for ( const Entry& entry : il )
-            insert( entry.key, std::move( entry.value ) );
+            add( entry.key, std::move( entry.value ) );
     }
 
     size_t hash( const Key& key ) const
@@ -147,7 +148,12 @@ public:
 
     Value* find( const Key& key )
     {
-        return table[ hash( key ) ].find( key );
+        return &table[ hash( key ) ].find( key )->value;
+    }
+
+    const Value* find( const Key& key ) const
+    {
+        return &table[ hash( key ) ].find( key )->value;
     }
 
     Value remove( const Key& key )
@@ -155,7 +161,7 @@ public:
         return table[ hash( key ) ].remove( key ).value;
     }
 
-    const Entry* insert( const Key& key, Value value )
+    const Entry* add( const Key& key, Value value )
     {
         table[ hash( key ) ].insert( { key, std::move( value ) } );
 
@@ -171,7 +177,7 @@ public:
 
         for ( Bucket& cell : table )
             for ( Entry& entry : cell.entries )
-                newMap.insert( entry.key, std::move( entry.value ) );
+                newMap.add( entry.key, std::move( entry.value ) );
 
         table.swap( newMap.table );
     }
@@ -195,7 +201,7 @@ public:
     
     const Value& operator []( const Key& key ) const
     {
-        Value* pValue = find( key );
+        const Value* pValue = find( key );
         assert( pValue != nullptr );
         return *pValue;
     }
@@ -208,4 +214,10 @@ public:
                 func( entry );
     }
 
+    auto enumerate()
+    {
+        for ( Bucket& cell : table )
+            for ( Entry& entry : cell.entries )
+                co_yield entry;
+    }
 };

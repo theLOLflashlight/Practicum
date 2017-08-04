@@ -2,6 +2,7 @@
 
 #include "Util.h"
 #include "Dungeon.h"
+#include "Texture.h"
 
 #include <memory>
 
@@ -26,6 +27,47 @@ struct Stats
     int magick;
     int speed;
     Obstruction blocks;
+
+    operator Obstruction() const
+    {
+        return blocks;
+    }
+};
+
+constexpr bool overlaps( Obstruction a, Obstruction b )
+{
+    return (a & b) != 0;
+}
+
+constexpr Stats WARRIOR_STATS { 7, 4, 2, 3, Obstruction::GROUND };
+constexpr Stats ROGUE_STATS { 5, 3, 3, 5, Obstruction::GROUND };
+constexpr Stats MAGE_STATS { 5, 3, 5, 3, Obstruction::GROUND };
+constexpr Stats PALADIN_STATS { 6, 4, 3, 3, Obstruction::GROUND };
+
+
+const Texture WARRIOR_TEX {
+    WARRIOR, Rect { 0, 0, 16, 16 },
+    TEXTURE_SIZE[ WARRIOR ]
+};
+
+const Texture ROGUE_TEX {
+    ROGUE, Rect { 0, 0, 16, 16 },
+    TEXTURE_SIZE[ ROGUE ]
+};
+
+const Texture MAGE_TEX {
+    MAGE, Rect { 0, 0, 16, 16 },
+    TEXTURE_SIZE[ MAGE ]
+};
+
+const Texture PALADIN_TEX {
+    PALADIN, Rect { 0, 0, 16, 16 },
+    TEXTURE_SIZE[ PALADIN ]
+};
+
+const Texture BEHOLDER_TEX {
+    ELEMENTAL, Rect { 2 * 16, 5 * 16, 16, 16 },
+    TEXTURE_SIZE[ ELEMENTAL ]
 };
 
 struct ActionResult;
@@ -76,61 +118,3 @@ Action& Action::operator =( std::function< ActionResult() > func )
     fnAction = std::move( func );
     return *this;
 }
-
-class PlayerGlue
-    //: public Stats
-{
-public:
-
-    //constexpr PlayerGlue( Stats stats = {} )
-    //    : Stats( move( stats ) )
-    //{
-    //}
-
-    virtual ~PlayerGlue() {}
-
-    virtual Position& position() = 0;
-
-    virtual HitPoints& health() = 0;
-
-    virtual Texture& texture() = 0;
-
-    virtual Stats& stats() = 0;
-
-    virtual Animation& animation() = 0;
-
-    virtual Action& action() = 0;
-
-    virtual Eid id() = 0;
-};
-
-class Player
-{
-    std::unique_ptr< PlayerGlue > glue;
-
-public:
-
-    Player() = default;
-
-    template< typename Glue >
-    Player( const Glue& glue )
-        : glue { new Glue( glue ) }
-    {
-    }
-
-    #define PLAYER_FUNC( FUNCTION )    \
-    decltype(auto) FUNCTION()          \
-    {                                  \
-        return glue->FUNCTION();       \
-    }
-
-    PLAYER_FUNC( position );
-    PLAYER_FUNC( health );
-    PLAYER_FUNC( texture );
-    PLAYER_FUNC( stats );
-    PLAYER_FUNC( animation );
-    PLAYER_FUNC( action );
-    PLAYER_FUNC( id );
-    
-    #undef PLAYER_FUNC
-};

@@ -354,6 +354,14 @@ public:
             for ( int x = 0; x < size.x; ++x )
                 func( tiles[ i++ ], { x, y } );
     }
+
+    auto enumerate()
+    {
+        int i = 0;
+        for ( int y = 0; y < size.y; ++y )
+            for ( int x = 0; x < size.x; ++x )
+                co_yield pass( tiles[ i++ ], ivec2( x, y ) );
+    }
 };
 
 class Dungeon
@@ -616,5 +624,11 @@ public:
     {
         for ( DungeonRoom& room : rooms )
             room.pos = glm::round( room.pos );
+    }
+
+    auto enumerate()
+    {
+        for ( DungeonRoom& room : rooms )
+            co_yield pass( (Room&) room, room.pos );
     }
 };

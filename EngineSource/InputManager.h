@@ -327,7 +327,7 @@ public:
             {
                 SDL_JoystickID joy_id = event.cdevice.which;
 
-                for ( auto x : gamepads.controllers )
+                for ( auto x : gamepads.controllers.enumerate() )
                 {
                     if ( x.value && !SDL_GameControllerGetAttached( x.value ) )
                     {

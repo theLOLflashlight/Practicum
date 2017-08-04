@@ -2,8 +2,6 @@
 
 #include "Scene.h"
 #include "glhelp.h"
-#include "Entity.h"
-#include "EntityId.h"
 #include "Mesh.h"
 #include "Texture.h"
 #include "SmartTexture.h"
@@ -29,148 +27,10 @@
 #include <functional>
 
 
-template< typename T >
-class RandomOccurrence
-{
-    using Value = T;
-
-    struct Outcome
-    {
-        Value outcome;
-        float weight;
-    };
-
-    float weight;
-    std::vector< Outcome > outcomes;
-
-public:
-
-    Value& select()
-    {
-        float r = rand_real( weight );
-        float t = 0;
-
-        for ( Outcome& o : outcomes )
-            if ( (t += o.weight) > r )
-                return o.outcome;
-
-        return outcomes[ 0 ].outcome;
-    }
-};
-
-
-bool proc( double ratePerMin, uint elapsed )
-{
-    return chance( ratePerMin * (elapsed / 60000) );
-}
-
-template< typename Func >
-auto proc( double ratePerMin, uint elapsed, Func&& func )
-{
-    if ( proc( ratePerMin, elapsed ) )
-        return func();
-
-    return {};
-}
-
-
 using DungeonComponentManager = ComponentManager< 1000,
     Position, HitPoints, Texture, Stats, Animation, Action >;
 
-class DungeonPlayer
-    : public PlayerGlue
-{
-    Eid eid = -1;
-    DungeonComponentManager* pComps;
-
-public:
-
-    DungeonPlayer() = default;
-
-    explicit DungeonPlayer( DungeonComponentManager& comps )
-        : eid { comps.newEntity() }
-        , pComps { &comps }
-    {
-        comps.attach( eid, Position {} );
-        comps.attach( eid, HitPoints {} );
-        comps.attach( eid, Texture {} );
-        comps.attach( eid, Stats {} );
-        comps.attach( eid, Animation {} );
-        comps.attach( eid, Action {} );
-    }
-
-    ~DungeonPlayer()
-    {
-        pComps->deleteEntity( eid );
-    }
-
-    Position& position() override
-    {
-        return pComps->get< Position >( eid );
-    }
-
-    HitPoints& health() override
-    {
-        return pComps->get< HitPoints >( eid );
-    }
-
-    Texture& texture() override
-    {
-        return pComps->get< Texture >( eid );
-    }
-
-    Stats& stats() override
-    {
-        return pComps->get< Stats >( eid );
-    }
-
-    Animation& animation() override
-    {
-        return pComps->get< Animation >( eid );
-    }
-
-    Action& action() override
-    {
-        return pComps->get< Action >( eid );
-    }
-
-    Eid id() override
-    {
-        return eid;
-    }
-};
-
-constexpr Stats WARRIOR_STATS { 7, 4, 2, 3, Obstruction::GROUND };
-constexpr Stats ROGUE_STATS { 5, 3, 3, 5, Obstruction::GROUND };
-constexpr Stats MAGE_STATS { 5, 3, 5, 3, Obstruction::GROUND };
-constexpr Stats PALADIN_STATS { 6, 4, 3, 3, Obstruction::GROUND };
-
 using PositionTween = TweenEntry< Position >;
-
-const Texture WARRIOR_TEX {
-    WARRIOR, Rect { 0, 0, 16, 16 },
-    TEXTURE_SIZE[ WARRIOR ]
-};
-
-const Texture ROGUE_TEX {
-    ROGUE, Rect { 0, 0, 16, 16 },
-    TEXTURE_SIZE[ ROGUE ]
-};
-
-const Texture MAGE_TEX {
-    MAGE, Rect { 0, 0, 16, 16 },
-    TEXTURE_SIZE[ MAGE ]
-};
-
-const Texture PALADIN_TEX {
-    PALADIN, Rect { 0, 0, 16, 16 },
-    TEXTURE_SIZE[ PALADIN ]
-};
-
-const Texture BEHOLDER_TEX {
-    ELEMENTAL, Rect { 2 * 16, 5 * 16, 16, 16 },
-    TEXTURE_SIZE[ ELEMENTAL ]
-};
 
 class DungeonScene
     : public Scene
@@ -192,12 +52,11 @@ public:
 protected:
 
     Dungeon dungeon;
+    Eid     playerId;
 
-    //DungeonPlayer player;
+private:
 
-    Eid playerId;
-
-    int    currCharacterIndex = 0;
+    int currCharacterIndex = 0;
     std::vector< Eid > characters;
 
 public:
@@ -228,50 +87,40 @@ protected:
             ? characters[ currCharacterIndex ] : -1;*/
     }
 
-    std::vector< Eid > entitiesOnTile( LevelTile* pTile )
+    generator< Eid > entitiesOnTile( LevelTile* pTile )
     {
-        std::vector< Eid > eids;
         Position tilePos = glm::round( dungeon.tilePos( pTile ) );
 
-        invokeSystem( [&]( Eid eid, Position pos ) {
-            if ( glm::round( pos ) == flip_y( tilePos * TILE_SIZE ) )
-                eids.push_back( eid );
-        } );
-
-        return eids;
+#if _MSC_VER >= 1911
+        for ( auto[ eid, pos ] : subset< Position >() ) {
+#else
+        for ( auto ntt : subset< Position >() ) {
+            auto eid = std::get< 0 >( ntt );
+            auto pos = std::get< 1 >( ntt );
+#endif
+            if ( round( pos ) == flip_y( tilePos * TILE_SIZE ) )
+                co_yield eid;
+        }
     }
 
     void moveEntity( Eid eid, LevelTile* pTile )
     {
-        if ( pTile == nullptr )
+        if ( pTile == nullptr || pTile->tileType != Tile::FLOOR )
             return;
-
-        bool blockMove = pTile->tileType != Tile::FLOOR;
-
-        vec2 tilePos = dungeon.tilePos( pTile );
 
         if ( hasAttached< Stats >( eid ) )
         {
             Stats& nttStats = get< Stats >( eid );
 
-            for ( Eid tileNtt : entitiesOnTile( pTile ) )
-            {
-                invokeProcess( tileNtt, [&]( Position& pos, Stats& stats )
-                {
-                    if ( (nttStats.blocks & stats.blocks) != 0 )
-                    {
-                        blockMove = true;
-                        //basicAttack( ntt, tileNtt );
-                    }
-                } );
-
-                if ( blockMove ) break;
-                // @TODO: handle aoe basic attacks?
-            }
+            for ( Eid tileEid : entitiesOnTile( pTile ) )
+                if ( auto ntt = components< Position, Stats >( tileEid ) )
+                    if ( overlaps( get< Stats >( eid ), std::get<1>( *ntt ) ) )
+                        return basicAttack( eid, tileEid );
         }
 
-        if ( !blockMove && hasAttached< Position >( eid ) )
+        if ( hasAttached< Position >( eid ) )
         {
+            vec2 tilePos = dungeon.tilePos( pTile );
             posTweens.push_back( PositionTween( eid,
                 flip_y( tilePos * TILE_SIZE ), prevTicks, 200 ) );
         }
@@ -358,8 +207,6 @@ protected:
     std::vector< FloorCorner > floorCorners;
 
     std::vector< PositionTween > posTweens;
-
-    std::vector< EntityId > enemies;
 
     void initExtras()
     {
@@ -722,9 +569,14 @@ public:
         } );
 
         // Update animations.
-        invokeSystem( [&]( Eid, Animation& anim ) {
+#if _MSC_VER >= 1911
+        for ( auto[ eid, anim ] : subset< Animation >() ) {
+#else
+        for ( auto ntt : subset< Animation >() ) {
+            auto& anim = std::get< 1 >( ntt );
+#endif
             anim.update( ticks );
-        } );
+        }
 
         // Perform tweens.
         for ( auto& tween : posTweens )
@@ -743,11 +595,16 @@ public:
             // so we store the ids in a temporary array.
             std::vector< Eid > deadEntities;
 
-            invokeSystem( [&]( Eid eid, HitPoints& hp )
-            {
+#if _MSC_VER >= 1911
+            for ( auto[ eid, hp ] : subset< HitPoints >() ) {
+#else
+            for ( auto ntt : subset< HitPoints >() ) {
+                auto eid = std::get< 0 >( ntt );
+                auto hp = std::get< 1 >( ntt );
+#endif
                 if ( hp <= 0 )
                     deadEntities.push_back( eid );
-            } );
+            }
 
             for ( Eid eid : deadEntities )
             {
@@ -770,6 +627,19 @@ public:
         useColor( { 1, 1, 1, 1 } );
 
         // Draw rooms.
+#if _MSC_VER >= 1911
+        for ( auto[ room, rpos ] : dungeon.enumerate() )
+        {
+            for ( auto[ tile, tpos ] : room.enumerate() )
+            {
+                useTexture( tile.getTexture() );
+                useSprite( tile.getSprite() );
+
+                vec2 pos = flip_y( rpos + (vec2) tpos ) * TILE_SIZE;
+                fillRect( pos, vec2( TILE_SIZE ) );
+            }
+        }
+#else
         dungeon.eachRoom( [&]( Room& room, vec2 rpos )
         {
             // Draw tiles.
@@ -782,6 +652,7 @@ public:
                 fillRect( pos, vec2( TILE_SIZE ) );
             } );
         } );
+#endif
 
         // Black out area between walls.
         {
@@ -804,7 +675,44 @@ public:
             }
         }
 
-        invokeSystem( [&]( Eid eid, Position pos, Texture tex )
+#if _MSC_VER >= 1911
+        for ( auto[ eid, pos, tex ] : subset< Position, Texture >() )
+        {
+            useTexture( (TextureId) tex.textureUnit );
+            useSprite( tex.spriteView );
+            useColor( tex.color );
+
+            fillRect( pos, vec2( TILE_SIZE ) );
+        }
+
+        // Draw healthbars
+        for ( auto[ eid, pos, hp, stats ] : subset< Position, HitPoints, Stats >() )
+        {
+            if ( eid == playerId )
+                continue;
+
+            useTexture( DEFAULT );
+            useSprite( { 0, 0, 1, 1 } );
+
+            float hpWidth = TILE_SIZE - 2;
+
+            vec2 hpPos = pos; hpPos.x -= 1;
+            vec2 hpSize { hpWidth, 1.5 };
+
+            useColor( vec4( 0, 0, 0, 0.7 ) );
+            fillRect( hpPos, hpSize );
+
+            float hpFrac = hp / (float) stats.maxHealth;
+            hpSize.x *= hpFrac;
+            hpPos.x -= hpWidth - hpSize.x;
+            vec3 hpColor = hpFrac > 0.333 ? hpFrac > 0.666
+                ? vec3( 0, 1, 0 ) : vec3( 1, 1, 0 ) : vec3( 1, 0, 0 );
+
+            useColor( vec4( hpColor, 0.9 ) );
+            fillRect( hpPos, hpSize );
+        }
+#else
+        invokeSystem( [&]( Eid, Position pos, Texture tex )
         {
             useTexture( (TextureId) tex.textureUnit );
             useSprite( tex.spriteView );
@@ -813,10 +721,9 @@ public:
             fillRect( pos, vec2( TILE_SIZE ) );
         } );
 
-        // Draw healthbars
         invokeSystem( [&]( Eid eid, Position pos, HitPoints hp, Stats stats )
         {
-            if ( playerId == eid )
+            if ( eid == playerId )
                 return;
 
             useTexture( DEFAULT );
@@ -839,6 +746,7 @@ public:
             useColor( vec4( hpColor, 0.9 ) );
             fillRect( hpPos, hpSize );
         } );
+#endif
 
         // Draw Player
         {

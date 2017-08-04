@@ -5,7 +5,9 @@
 
 #include <bitset>
 #include <array>
+#include <map>
 
+#include "HashMap.h"
 #include "Dictionary.h"
 #include "Util.h"
 
@@ -19,7 +21,7 @@ public:
     static constexpr int MAX_PLAYERS = 4;
 
     using PlayerIndex = int;
-    using ControllerMap = Dictionary< SDL_JoystickID, SDL_GameController* >;
+    using ControllerMap = HashMap< SDL_JoystickID, SDL_GameController* >;
     using PlayerList = std::array< SDL_JoystickID, MAX_PLAYERS >;
 
     using ButtonStates = std::array< std::bitset< SDL_CONTROLLER_BUTTON_MAX >, MAX_PLAYERS >;

@@ -18,6 +18,9 @@ public:
     using ValueType = T;
     static constexpr int SIZE = N;
 
+    using iterator = decltype( _array.begin() );
+    using const_iterator = decltype( _array.cbegin() );
+
     LocalVector()
         : _count( 0 )
     {
@@ -88,8 +91,6 @@ public:
 
         _count = newSize;
     }
-
-    using iterator = decltype( _array.begin() );
 
     void insert( iterator where, ValueType value )
     {

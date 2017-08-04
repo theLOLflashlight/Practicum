@@ -7,6 +7,8 @@
 #include <utility>
 #include <memory>
 #include <functional>
+#include <type_traits>
+#include <optional>
 #include <glm/glm.hpp>
 #include <experimental/generator>
 
@@ -26,6 +28,42 @@ using glm::ivec3;
 using glm::ivec4;
 
 using std::experimental::generator;
+
+using std::optional;
+using std::make_optional;
+
+using std::tuple;
+using std::tie;
+using std::make_tuple;
+using std::tuple_cat;
+
+template< typename Float >
+constexpr Float PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170;
+
+//template< size_t N, typename... Types >
+//constexpr decltype(auto) get( tuple< Types... >& tup )
+//{
+//    return std::get< N >( tup );
+//}
+
+namespace detail
+{
+    template< typename T >
+    struct Pass
+    {
+        using type = std::conditional_t<
+            std::is_rvalue_reference_v< T >, T, T& >;
+    };
+
+    template< typename T >
+    using pass_t = typename Pass< T >::type;
+}
+
+template< typename... Args >
+auto pass( Args&&... args )
+{
+    return tuple< detail::pass_t< Args >... >( forward< Args >( args )... );
+}
 
 #define FORWARD( ARG ) \
 std::forward< std::remove_reference_t< decltype( ARG ) > >( ARG )
@@ -223,7 +261,7 @@ inline float random( float min, float max )
 }
 
 // Performs a binary search over the range. Returns an iterator to 
-// the matched element on success; end() on failure.
+// the matched element on success; or end() on failure.
 template< typename Itr >
 Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
 {
@@ -246,7 +284,7 @@ Itr binary_search( Itr first, Itr last, const decltype( *first ) target )
 }
 
 // Performs a binary search over the range. Returns an iterator to 
-// the matched element on success; end() on failure.
+// the matched element on success; or end() on failure.
 template< typename Cont >
 auto binary_search( Cont& cont, const decltype( *std::begin( cont ) ) target )
 {
@@ -262,7 +300,7 @@ Itr binary_search2( Itr first, Itr last, const decltype( *first ) target )
     Itr upper = last;
     Itr midle = lower + (upper - lower) / 2;
 
-    while ( lower <= upper )
+    while ( lower < upper )
     {
         if ( *midle < target )
             lower = midle + 1;
@@ -347,6 +385,12 @@ void unrotate( T& )
 {
 }
 
+// Uses half-open range [lowest, highest).
+template< typename T >
+constexpr bool in_range( const T& t, const T& lowest, const T& highest )
+{
+    return lowest <= t && t < highest;
+}
 
 template< typename T, typename Tuple >
 struct tuple_element_index;

@@ -1,12 +1,6 @@
 #pragma once
 
-#include "Scene.h"
-#include "Dictionary.h"
-#include "EntityId.h"
-#include "Entity.h"
-
 #include "Util.h"
-#include "SparseBucketArray.h"
 #include "LocalVector.h"
 
 #include <array>
@@ -33,74 +27,92 @@ constexpr uint64_t const_bitset( uint64_t bits = 0 )
     return const_bitset< Bit2, Bits... >( bits | (1 << Bit1) );
 }
 
+// Entity Id type. Serves as an index into several ComponentManager sub-structures.
 using Eid = int;
+// Eid indicating no entitiy.
+enum : Eid { NULL_EID = -1 };
 
 // A fully managed* ECS or Entity-Component-System.
 // *what does it mean to be 'fully managed'?
 // ?I don't know but it sounds good.
-template<
-    size_t      MaxEntities,
-    typename... Components
->
+template< size_t MaxEntities, typename... Components >
 class ComponentManager
 {
 public:
 
     // Maximum number of entities (and components of each type) to be stored.
     static constexpr int MAX_ENTITIES = MaxEntities;
+
     // Total number of component types.
     static constexpr int COMPONENT_COUNT = sizeof...(Components);
 
     // Component storage type alias.
     template< typename T, size_t SIZE = MAX_ENTITIES >
     using Storage = std::array< T, SIZE >;
-    //using Storage = SparseBucketArray< T, SIZE >;
 
-    // SparseBucketArray is more memory efficient but is slower to search.
-    // It also requires allocation.
+    // Stores entities by their Eid.
+    using EntityCollection = LocalVector< Eid, MAX_ENTITIES >;
+
+    // Stores component attachment bitsets for each entity.
+    using AttachmentCollection = Storage< std::bitset< COMPONENT_COUNT > >;
 
     // Aggregates component storage.
     using ComponentsCollection = std::tuple< Storage< Components >... >;
 
 private:
 
-    // Maps ids to entities.
-    //Dictionary< EntityId, Entity > _entities { MAX_ENTITIES };
-    
-    LocalVector< Eid, MAX_ENTITIES > _nttIds;
+    // Ordered set of active entities given by their Eid.
+    EntityCollection     _entities;
+    // List of attached components to each entity.
+    AttachmentCollection _attachments;
+    // Tuple of all components of each type.
+    ComponentsCollection _components;
 
+    // Returns the next eid to be returned by newEntity().
+    Eid _nextEid()
+    {
+        // Return the index of the first element whose
+        // index does not match its value.
+        for ( size_t i = 0; i < _entities.size(); ++i )
+            if ( _entities[ i ] != i )
+                return i;
+
+        // Return the index of _entities.end() or NULL_EID.
+        return _entities.size() == _entities.capacity() ? NULL_EID : _entities.size();
+    }
+
+    // Adds and entity to the ECS and returns it.
     Eid _addEntity( Eid eid )
     {
-        auto where = binary_search2( _nttIds, eid );
-        _nttIds.insert( where, eid );
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
+        _entities.insert( binary_search2( _entities, eid ), eid );
         return eid;
     }
 
+    // Removes an entity from the ECS.
     void _removeEntity( Eid eid )
     {
-        auto where = binary_search( _nttIds, eid );
-        _nttIds.remove( where );
-    }
-
-    Storage< std::bitset< COMPONENT_COUNT > > _attachments;
-
-    // Stores all components of each type.
-    ComponentsCollection _components;
-
-    Eid _nextId = 0;
-
-    Eid _nextEid()
-    {
-        return _nextId++; // @Temporary
-
-        for ( auto itr = _nttIds.begin() + 1; itr < _nttIds.end(); ++itr )
-            if ( itr[ -1 ] + 1 != *itr )
-                return itr[ -1 ] + 1;
-
-        return _nttIds.size();
+        if ( in_range( eid, 0, MAX_ENTITIES ) )
+            _entities.remove( binary_search( _entities, eid ) );
     }
 
 public:
+
+    template< typename... Components >
+    generator< tuple< Eid, Components&... > > subset()
+    {
+        for ( Eid eid : _entities )
+            if ( match_signature< Components... >( eid ) )
+                co_yield { eid, get< Components >( eid )... };
+    }
+
+    template< typename... Components >
+    optional< tuple< Components&... > > components( Eid eid )
+    {
+        if ( match_signature< Components... >( eid ) )
+            return tie( get< Components >( eid )... );
+        return {};
+    }
 
     // Generates and returns a new entity with no attached components.
     Eid newEntity()
@@ -108,21 +120,10 @@ public:
         return _addEntity( _nextEid() );
     }
 
-    // Detaches all components from the entity with the given id and then
-    // removes it from the set of managed entities.
-    void deleteEntity( Eid eid )
-    {
-        if ( eid == -1 )
-            return;
-
-        detachAll( eid );
-        _removeEntity( eid );
-    }
-
-    // Generates and returns a new entity with the passed components
+    // Generates and returns a new entity with the supplied components
     // attached to it.
     template< typename... Components >
-    Eid createEntity( Components&&... comps )
+    Eid newEntity( Components&&... comps )
     {
         Eid eid = newEntity();
         // Hack to repeatedly call a function via pack expansion.
@@ -130,10 +131,22 @@ public:
         return eid;
     }
 
+    // Detaches all components from the entity with the given id and then
+    // removes it from the set of managed entities.
+    void deleteEntity( Eid eid )
+    {
+        if ( in_range( eid, 0, MAX_ENTITIES ) )
+        {
+            detachAll( eid );
+            _removeEntity( eid );
+        }
+    }
+
     // Attaches a component to an entity, overwriting any existing ones.
     template< typename Component >
     void attach( Eid eid, Component&& cmpt )
     {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
         _attachments[ eid ][ component_index< Component >() ] = 1;
         get< Component >( eid ) = forward< Component >( cmpt );
     }
@@ -142,6 +155,7 @@ public:
     template< typename Component >
     bool hasAttached( Eid eid ) const
     {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
         return _attachments[ eid ][ component_index< Component >() ];
     }
 
@@ -149,6 +163,7 @@ public:
     template< typename Component >
     void detach( Eid eid )
     {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
         destroy( get< Component >( eid ) );
         _attachments[ eid ][ component_index< Component >() ] = 0;
     }
@@ -156,19 +171,22 @@ public:
     // Detaches all components attached to an entity.
     void detachAll( Eid eid )
     {
-        TUPLE_FOR( auto& cmpt, _components ) {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
+        TUPLE_FOR( auto& cmpt, _components )
+        {
             using Component = decltype( cmpt[ 0 ] );
             if ( hasAttached< Component >( eid ) )
                 detach< Component >( eid );
         };
     }
 
-    // Gets a component which is already attached to an entity.
+    // Gets a component which is attached to an entity.
     template< typename Component >
     decltype(auto) get( Eid eid )
     {
-        using Type = Storage< std::decay_t< Component > >;
         assert( hasAttached< Component >( eid ) );
+        using Type = Storage< std::decay_t< Component > >;
+        // Index into the storage for the type of component.
         return std::get< Type >( _components )[ eid ];
     }
 
@@ -186,25 +204,19 @@ public:
 
 private:
 
-    template< typename Func, typename... Components >
-    bool invokeProcess( Eid eid, Func&& func, std::tuple< Components... >* )
+    // Returns true if the supplied function's parameters are a subset of 
+    // the component types used by the ECS; false otherwise.
+    template< typename Proc >
+    static constexpr bool validate_process_args()
     {
-        if ( match_signature< Components... >( eid ) )
-        {
-            func( get< Components >( eid )... );
-            return true;
-        }
-        return false;
+        // Tag used in overload resolution.
+        using params_tag = function_traits< Proc >::decay_args_tuple;
+        return validate_process( (params_tag*) 0 );
     }
 
-    template< typename Func, typename... Components >
-    void invokeSystem( Func&& func, std::tuple< Eid, Components... >* )
-    {
-        for ( Eid eid : _nttIds )
-            if ( match_signature< Components... >( eid ) )
-                func( eid, get< Components >( eid )... );
-    }
-
+    // Returns true if the supplied function's first parameter is of type Eid
+    // and the remaining parameters are a subset of the component types used 
+    // by the ECS; false otherwise.
     template< typename Sys >
     static constexpr bool validate_system_args()
     {
@@ -215,26 +227,44 @@ private:
             && validate_system( (params_tag*) 0 );
     }
 
-    template< typename Proc >
-    static constexpr bool validate_process_args()
+    // invokeProcess(...) implementation.
+    template< typename Func, typename... Components >
+    bool _invokeProcess( Eid eid, Func&& func, std::tuple< Components... >* )
     {
-        // Tag used in overload resolution.
-        using params_tag = function_traits< Proc >::decay_args_tuple;
-        return validate_process( (params_tag*) 0 );
+        if ( match_signature< Components... >( eid ) )
+        {
+            func( get< Components >( eid )... );
+            return true;
+        }
+        return false;
     }
 
-protected:
+    // invokeSystem(...) implementation.
+    template< typename Func, typename... Components >
+    void _invokeSystem( Func&& func, std::tuple< Eid, Components... >* )
+    {
+        for ( Eid eid : _entities )
+            if ( match_signature< Components... >( eid ) )
+                func( eid, get< Components >( eid )... );
+    }
 
+public:
+
+    // Invokes a function on a specific entity if it matches the
+    // signature composed by parameter types of func. The function 
+    // 'func' will be invoked with argument types [Components&...].
     template< typename Func >
     auto invokeProcess( Eid eid, Func&& func )
         -> enable_if_t< validate_process_args< Func >(), bool >
     {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
+        // Tag used in overload resolution.
         using params_tag = function_traits< Func >::args_tuple;
-        return invokeProcess( eid, func, (params_tag*) 0 );
+        return _invokeProcess( eid, forward< Func >( func ), (params_tag*) 0 );
     }
 
     // Invokes a function on all entities which match the signature
-    // composed by the supplied Component types. The function 'updateFn' will
+    // composed by parameter types of func. The function 'func' will
     // be invoked with argument types [Eid, Components&...].
     template< typename Func >
     auto invokeSystem( Func&& func )
@@ -242,7 +272,7 @@ protected:
     {
         // Tag used in overload resolution.
         using params_tag = function_traits< Func >::args_tuple;
-        invokeSystem( forward< Func >( func ), (params_tag*) 0 );
+        _invokeSystem( forward< Func >( func ), (params_tag*) 0 );
     }
 
     // Generates a signature unique to the supplied set of components.
@@ -257,7 +287,7 @@ protected:
     // If this function returns true, it is said that the bitset "matches" 
     // the signature.
     template< typename... Components >
-    static constexpr bool match_signature( uint64_t bitset )
+    static constexpr bool _match_signature( uint64_t bitset )
     {
         return match_bitset( bitset, compose_signature< Components... >() );
     }
@@ -265,16 +295,9 @@ protected:
     // Returns true if the entity "matches" the signature composed by the supplied 
     // components. False otherwise.
     template< typename... Components >
-    bool match_signature( Eid eid )
+    bool match_signature( Eid eid ) const
     {
-        return match_signature< Components... >( _attachments[ eid ].to_ullong() );
-    }
-
-    // Convenience function allowing std::bitset to be matched against a signature.
-    template< typename... Components, size_t N >
-    static bool match_signature( const std::bitset< N >& bitset )
-    {
-        return match_signature< Components... >( bitset.to_ullong() );
+        return _match_signature< Components... >( _attachments[ eid ].to_ullong() );
     }
 
 private:
@@ -331,15 +354,16 @@ private:
 
 public:
 
-    const auto& getEntities() const
+    generator< Eid > getEntities() const
     {
-        return _nttIds;
+        for ( Eid eid : _entities )
+            co_yield eid;
     }
 
     // Returns the number of entities managed by the ECS.
     int entityCount() const
     {
-        return _nttIds.size();
+        return _entities.size();
     }
 
     // Returns the number of components attached to entities.
@@ -347,7 +371,7 @@ public:
     int componentCount() const
     {
         int count = 0;
-        for ( Eid eid : _nttIds )
+        for ( Eid eid : _entities )
             count += _attachments[ eid ].count();
         return count;
     }
@@ -358,7 +382,7 @@ public:
     int count() const
     {
         int count = 0;
-        for ( Eid eid : _nttIds )
+        for ( Eid eid : _entities )
             count += match_signature< Components... >( eid );
         return count;
     }
