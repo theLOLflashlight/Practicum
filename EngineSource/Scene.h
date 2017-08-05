@@ -59,7 +59,7 @@ public:
     }
 
     // Called once when added to a scene manager.
-    virtual void init( unsigned ticks )
+    virtual void start( unsigned ticks )
     {
         prevTicks = ticks;
         expired = false;
@@ -78,7 +78,7 @@ public:
     }
 
     // Called once when removed from a scene manager.
-    virtual void exit( unsigned ticks )
+    virtual void stop( unsigned ticks )
     {
         expired = true;
     }

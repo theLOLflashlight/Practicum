@@ -19,6 +19,8 @@
 #include "Astar.h"
 
 #include "Player.h"
+#include "Delay.h"
+#include "Behavior.h"
 
 #include <glm/gtx/transform.hpp>
 #include <vector>
@@ -26,9 +28,48 @@
 #include <bitset>
 #include <functional>
 
+#define FOR_COMPONENT( TYPE, NAME ) for ( TYPE& NAME : components< TYPE >() )
 
-using DungeonComponentManager = ComponentManager< 1000,
-    Position, HitPoints, Texture, Stats, Animation, Action >;
+enum DungeonEntityFlags
+{
+    IS_DEAD,
+    IS_ACTIVE,
+    _last
+};
+
+using Behavior = VariadicBehavior< IdleBehavior, WanderBehavior >;
+
+using DungeonComponentManager = ComponentManager< 1000, DungeonEntityFlags,
+    Position, HitPoints, Texture, Stats, Animation, Action, Delay, Behavior >;
+
+struct Entity
+{
+    const Eid eid;
+};
+
+struct HpEntity : Entity
+{
+    HitPoints& hp;
+
+    HpEntity( tuple< Eid, HitPoints& > src )
+        : Entity { std::get< 0 >( src ) }
+        , hp { std::get< 1 >( src ) }
+    {
+    }
+};
+
+struct BlockerEntity : Entity
+{
+    Position& pos;
+    Stats&    stats;
+
+    BlockerEntity( tuple< Eid, Position&, Stats& > src )
+        : Entity { std::get< 0 >( src ) }
+        , pos { std::get< 1 >( src ) }
+        , stats { std::get< 2 >( src ) }
+    {
+    }
+};
 
 using PositionTween = TweenEntry< Position >;
 
@@ -44,6 +85,8 @@ public:
     static constexpr float RENDER_SCALE = 3;
     static constexpr float TILE_SIZE = 16;
     static constexpr float CORNER_SIZE = 4;
+
+    static constexpr unsigned ENEMY_ACTION_DELAY = 200;
 
     static constexpr LevelTile::Floor FLOOR_TILE = LevelTile::Floor::TILE3;
     static constexpr LevelTile::Wall WALL_TILE = LevelTile::Wall::BRICK3;
@@ -91,39 +134,35 @@ protected:
     {
         Position tilePos = glm::round( dungeon.tilePos( pTile ) );
 
-#if _MSC_VER >= 1911
-        for ( auto[ eid, pos ] : subset< Position >() ) {
-#else
+#if _MSC_VER < 1911
         for ( auto ntt : subset< Position >() ) {
             auto eid = std::get< 0 >( ntt );
             auto pos = std::get< 1 >( ntt );
+#else
+        for ( auto[ eid, pos ] : entities< Position >() ) {
 #endif
             if ( round( pos ) == flip_y( tilePos * TILE_SIZE ) )
                 co_yield eid;
         }
     }
 
-    void moveEntity( Eid eid, LevelTile* pTile )
+    ActionResult moveEntity( Eid eid, LevelTile* pTile )
     {
-        if ( pTile == nullptr || pTile->tileType != Tile::FLOOR )
-            return;
+        if ( pTile == nullptr || pTile->tileType != Tile::FLOOR
+            || !hasAttached< Position >( eid ) )
+            return false;
 
         if ( hasAttached< Stats >( eid ) )
-        {
-            Stats& nttStats = get< Stats >( eid );
-
             for ( Eid tileEid : entitiesOnTile( pTile ) )
-                if ( auto ntt = components< Position, Stats >( tileEid ) )
-                    if ( overlaps( get< Stats >( eid ), std::get<1>( *ntt ) ) )
-                        return basicAttack( eid, tileEid );
-        }
+                if ( auto ntt = entity< Position, Stats >( tileEid ) )
+                    if ( overlaps( get< Stats >( eid ), std::get< 1 >( *ntt ) ) )
+                        return [=] { return basicAttack( eid, tileEid ); };
 
-        if ( hasAttached< Position >( eid ) )
-        {
-            vec2 tilePos = dungeon.tilePos( pTile );
-            posTweens.push_back( PositionTween( eid,
-                flip_y( tilePos * TILE_SIZE ), prevTicks, 200 ) );
-        }
+        vec2 tilePos = dungeon.tilePos( pTile );
+        posTweens.push_back( PositionTween( eid,
+            flip_y( tilePos * TILE_SIZE ), prevTicks, ENEMY_ACTION_DELAY ) );
+
+        return true;
     }
 
     void movePlayer( vec2 delta )
@@ -188,14 +227,16 @@ protected:
         get< Texture >( playerId ).spriteView.y = dir * TILE_SIZE;
     }
 
-    void basicAttack( Eid attacker, Eid defender )
+    ActionResult basicAttack( Eid attacker, Eid defender )
     {
         #define CHECK match_signature< Position, Stats, HitPoints >
 
         if ( CHECK( attacker ) && CHECK( defender ) )
         {
             get< HitPoints >( defender ) -= get< Stats >( attacker ).attack;
+            return true;
         }
+        return false;
 
         #undef CHECK
     }
@@ -356,24 +397,37 @@ protected:
         attach( eid, stats );
         attach( eid, tex );
         attach( eid, stats.maxHealth );
+        //*
+        attach< Behavior >( eid, WanderBehavior {
+            rand_int( 3 ), {}
+        } );
+        attach( eid, Action {} );
+        /*/
         attach( eid, Action { [&, eid]
         {
-            if ( chance( 0.02 ) )
+            uint ticks = SDL_GetTicks();
+        
+            if ( !hasAttached< Delay >( eid ) )
             {
                 static const vec2 VECTORS[]
                 {
-                    { 1, 0 },{ -1, 0 },{ 0, 1 },{ 0, -1 }
+                    { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }
                 };
-
                 vec2 delta = VECTORS[ rand_int( 3 ) ];
+        
                 vec2 pos = get< Position >( eid ) / TILE_SIZE + delta;
-                //vec2 pos = randTilePos( Tile::FLOOR ) / TILE_SIZE;
                 moveEntity( eid, dungeon.findTile( pos.x, -pos.y ) );
-
+        
+                attach( eid, Delay( ENEMY_ACTION_DELAY, ticks ) );
+            }
+        
+            if ( get< Delay >( eid ).check( ticks ) )
+            {
+                detach< Delay >( eid );
                 return ActionResult( true );
             }
             return ActionResult( false );
-        } } );
+        } } );//*/
         return eid;
     }
 
@@ -395,9 +449,9 @@ protected:
 
 public:
 
-    void init( uint ticks ) override
+    void start( uint ticks ) override
     {
-        Scene::init( ticks );
+        Scene::start( ticks );
 
         // Set up camera.
         camPos = { -TILE_SIZE, 0 };
@@ -492,12 +546,69 @@ public:
         Scene::pause( ticks );
     }
 
-    void exit( uint ticks ) override
+    void stop( uint ticks ) override
     {
-        Scene::exit( ticks );
+        Scene::stop( ticks );
     }
 
     std::bitset< 4 > movementBuffer;
+
+    struct AI
+    {
+        DungeonScene* pScene;
+        Eid           eid;
+
+        template< typename T >
+        Action operator ()( T& )
+        {
+            return [] { return ActionResult( true ); };
+        }
+
+        Action operator ()( WanderBehavior& bhvr )
+        {
+            return [&, ntt = pScene->entity< Position, Action >( eid )]()
+                -> ActionResult
+            {
+                if ( !ntt ) return true;
+                uint ticks = SDL_GetTicks();
+
+                if ( chance( 0.10 ) )
+                {
+                    bhvr.heading += rand_int( 3, 5 );
+                    bhvr.heading %= 4;
+                }
+
+                while ( !bhvr.delay.started() )
+                {
+                    if ( chance( 0.15 ) )
+                        return true;
+
+                    static const vec2 VECTORS[]
+                    {
+                        { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 },
+                    };
+
+                    vec2 delta = VECTORS[ bhvr.heading ];
+                    vec2 pos = std::get< 0 >( *ntt ) / TILE_SIZE + delta;
+                    
+                    ActionResult result = pScene->moveEntity( eid,
+                        pScene->dungeon.findTile( pos.x, -pos.y ) );
+
+                    if ( result.succeeded )
+                        bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
+                    else
+                        bhvr.heading = rand_int( 3 );
+                }
+
+                if ( bhvr.delay.check( ticks ) )
+                {
+                    bhvr.delay.restart();
+                    return true;
+                }
+                return false;
+            };
+        }
+    };
 
     void update( uint ticks ) override
     {
@@ -550,70 +661,51 @@ public:
                 movementBuffer = keys;
         }
 
-        invokeProcess( currentCharacter(), [&]( Action& action )
+        // Apply behaviors.
+        if ( auto ntt = entity< Action, Behavior >( currentCharacter() ) )
         {
-            while ( 1 )
+            auto[ action, behavior ] = *ntt;
+            action = visit( AI { this, currentCharacter() }, behavior );
+        }
+
+        // Perform entity actions.
+        if ( auto tup = entity< Action >( currentCharacter() ) )
+        {
+            for ( Action& action = std::get< 0 >( *tup ); ; )
             {
                 ActionResult result = action.perform();
-
                 if ( !result.succeeded )
-                    return;
-
-                if ( !!result.backupAction )
+                    goto action_failure;
+                if ( result.backupAction )
                     break;
-
                 action = move( result.backupAction );
             }
-
-            nextCharacter();
-        } );
+        }
+        nextCharacter();
+    action_failure: ;
 
         // Update animations.
-#if _MSC_VER >= 1911
-        for ( auto[ eid, anim ] : subset< Animation >() ) {
-#else
-        for ( auto ntt : subset< Animation >() ) {
-            auto& anim = std::get< 1 >( ntt );
-#endif
+        for ( Animation& anim : components< Animation >() )
             anim.update( ticks );
-        }
 
         // Perform tweens.
         for ( auto& tween : posTweens )
-        {
             tween( ticks, get< Position >( tween.eid ) );
-        }
-
-        // Remove expired tweeners.
-        remove_elements( posTweens, [ticks]( PositionTween& e ) {
-            return e.expired( ticks );
-        } );
 
         // Handle entity death
         {
-            // Can't add or remove entities while invoking a system
-            // so we store the ids in a temporary array.
-            std::vector< Eid > deadEntities;
+            for ( HpEntity ntt : entities< HitPoints >() )
+                if ( ntt.hp <= 0 )
+                    flag< IS_DEAD >( ntt.eid ) = true;
 
-#if _MSC_VER >= 1911
-            for ( auto[ eid, hp ] : subset< HitPoints >() ) {
-#else
-            for ( auto ntt : subset< HitPoints >() ) {
-                auto eid = std::get< 0 >( ntt );
-                auto hp = std::get< 1 >( ntt );
-#endif
-                if ( hp <= 0 )
-                    deadEntities.push_back( eid );
-            }
+            remove_elements( posTweens, [&]( PositionTween& tween ) {
+                return tween.expired( ticks ) || flag< IS_DEAD >( tween.eid );
+            } );
 
-            for ( Eid eid : deadEntities )
-            {
-                deleteEntity( eid );
-                remove_elements( characters, [eid]( Eid nmeid ) {
-                    return nmeid == eid;
-                } );
-                currCharacterIndex %= characters.size();
-            }
+            remove_elements( characters, MEMFN( flag< IS_DEAD > ) );
+            currCharacterIndex %= characters.size();
+
+            deleteEntities( MEMFN( flag< IS_DEAD > ) );
         }
 
     }
@@ -676,7 +768,7 @@ public:
         }
 
 #if _MSC_VER >= 1911
-        for ( auto[ eid, pos, tex ] : subset< Position, Texture >() )
+        for ( auto[ eid, pos, tex ] : entities< Position, Texture >() )
         {
             useTexture( (TextureId) tex.textureUnit );
             useSprite( tex.spriteView );
@@ -686,7 +778,7 @@ public:
         }
 
         // Draw healthbars
-        for ( auto[ eid, pos, hp, stats ] : subset< Position, HitPoints, Stats >() )
+        for ( auto[ eid, pos, hp, stats ] : entities< Position, HitPoints, Stats >() )
         {
             if ( eid == playerId )
                 continue;

@@ -35,6 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="Behavior.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Dice.h" />
     <ClInclude Include="Dungeon.h" />

@@ -19,7 +19,7 @@ private:
         if ( Scene* top = topScene() )
             top->pause( ticks );
 
-        scene->init( ticks );
+        scene->start( ticks );
         scene->pSceneManager = this;
 
         _scenes.push_back( scene );
@@ -36,7 +36,7 @@ private:
         top->pSceneManager = nullptr;
 
         _scenes.pop_back();
-        top->exit( ticks );
+        top->stop( ticks );
 
         if ( (top = topScene()) )
             top->resume( ticks );

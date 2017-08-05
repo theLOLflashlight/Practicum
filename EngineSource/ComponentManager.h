@@ -32,19 +32,30 @@ using Eid = int;
 // Eid indicating no entitiy.
 enum : Eid { NULL_EID = -1 };
 
+enum class NoFlags { _last = 0 };
+
 // A fully managed* ECS or Entity-Component-System.
 // *what does it mean to be 'fully managed'?
 // ?I don't know but it sounds good.
-template< size_t MaxEntities, typename... Components >
+template< size_t MaxEntities, typename FlagsType, typename... Components >
 class ComponentManager
 {
 public:
+
+    using Flags = FlagsType;
+
+    static constexpr bool HAS_FLAGS = !std::is_same_v< Flags, NoFlags >;
 
     // Maximum number of entities (and components of each type) to be stored.
     static constexpr int MAX_ENTITIES = MaxEntities;
 
     // Total number of component types.
     static constexpr int COMPONENT_COUNT = sizeof...(Components);
+
+    using Bitset = std::bitset< COMPONENT_COUNT + Flags::_last >;
+    using BitRef = typename Bitset::reference;
+
+    static constexpr uint64_t ATTACHMENT_MASK = ~0ull >> (64 - COMPONENT_COUNT);
 
     // Component storage type alias.
     template< typename T, size_t SIZE = MAX_ENTITIES >
@@ -54,7 +65,7 @@ public:
     using EntityCollection = LocalVector< Eid, MAX_ENTITIES >;
 
     // Stores component attachment bitsets for each entity.
-    using AttachmentCollection = Storage< std::bitset< COMPONENT_COUNT > >;
+    using AttachmentCollection = Storage< Bitset >;
 
     // Aggregates component storage.
     using ComponentsCollection = std::tuple< Storage< Components >... >;
@@ -81,7 +92,7 @@ private:
         return _entities.size() == _entities.capacity() ? NULL_EID : _entities.size();
     }
 
-    // Adds and entity to the ECS and returns it.
+    // Adds an entity to the ECS and returns it.
     Eid _addEntity( Eid eid )
     {
         assert( in_range( eid, 0, MAX_ENTITIES ) );
@@ -93,25 +104,67 @@ private:
     void _removeEntity( Eid eid )
     {
         if ( in_range( eid, 0, MAX_ENTITIES ) )
+        {
+            _attachments[ eid ].reset();
             _entities.remove( binary_search( _entities, eid ) );
+        }
+    }
+
+    template< typename... Components >
+    static constexpr bool validate_system( std::tuple< Eid, Components... >* = 0 )
+    {
+        return validate_signature< Components... >();
+    }
+
+    template< typename... Components >
+    static constexpr bool validate_process( std::tuple< Components... >* = 0 )
+    {
+        return validate_signature< Components... >();
+    }
+
+    template< typename Component >
+    static constexpr bool validate_component()
+    {
+        return validate_signature< Component >();
     }
 
 public:
 
-    template< typename... Components >
-    generator< tuple< Eid, Components&... > > subset()
+    // Yields the active entity ids.
+    generator< Eid > entities() const
+    {
+        for ( Eid eid : _entities )
+            co_yield eid;
+    }
+
+    // Yields the subset of entities which match the provided signature.
+    template< typename... Components,
+        typename = enable_if_t< sizeof...(Components) != 0 > >
+    generator< tuple< Eid, Components&... > > entities()
     {
         for ( Eid eid : _entities )
             if ( match_signature< Components... >( eid ) )
                 co_yield { eid, get< Components >( eid )... };
     }
 
+    // Returns the components of an entity if it matches the provided signature.
     template< typename... Components >
-    optional< tuple< Components&... > > components( Eid eid )
+    optional< tuple< Components&... > > entity( Eid eid )
     {
         if ( match_signature< Components... >( eid ) )
-            return tie( get< Components >( eid )... );
+            return get< Components... >( eid );
         return {};
+    }
+
+    // Yields all attached components of a particular type via reference_wrapper.
+    template< typename Component, typename... Guard,
+        typename = enable_if_t< sizeof...(Guard) == 0
+            && validate_component< Component >() > >
+    auto components()
+    {
+        for ( Eid eid : _entities )
+            if ( hasAttached< Component >( eid ) )
+                co_yield std::ref( get< Component >( eid ) );
     }
 
     // Generates and returns a new entity with no attached components.
@@ -131,6 +184,13 @@ public:
         return eid;
     }
 
+    // Checks whether an entity is active in the manager (it has been instantiated).
+    bool exists( Eid eid ) const
+    {
+        assert( in_range( eid, 0, MAX_ENTITIES ) );
+        return binary_search( _entities, eid ) != _entities.end();
+    }
+
     // Detaches all components from the entity with the given id and then
     // removes it from the set of managed entities.
     void deleteEntity( Eid eid )
@@ -140,6 +200,20 @@ public:
             detachAll( eid );
             _removeEntity( eid );
         }
+    }
+
+    template< typename Func >
+    auto deleteEntities( Func&& func )
+        -> decltype( (bool) func( Eid() ), void() )
+    {
+        auto split = std::remove_if( _entities.begin(), _entities.end(), func );
+        for ( auto itr = split; itr != _entities.end(); ++itr )
+        {
+            detachAll( *itr );
+            _attachments[ *itr ].reset();
+            *itr = 0;
+        }
+        _entities.resize( std::distance( _entities.begin(), split ) );
     }
 
     // Attaches a component to an entity, overwriting any existing ones.
@@ -182,12 +256,20 @@ public:
 
     // Gets a component which is attached to an entity.
     template< typename Component >
-    decltype(auto) get( Eid eid )
+    Component& get( Eid eid )
     {
         assert( hasAttached< Component >( eid ) );
         using Type = Storage< std::decay_t< Component > >;
         // Index into the storage for the type of component.
         return std::get< Type >( _components )[ eid ];
+    }
+
+    // Gets several components which are attached to an entity.
+    template< typename... Components,
+        typename = enable_if_t< (sizeof...(Components) > 1) > >
+    tuple< Components&... > get( Eid eid )
+    {
+        return tie( get< Components >( eid )... );
     }
 
     // Gets a component if one is attached, otherwise it calls the backup
@@ -196,10 +278,39 @@ public:
     // backup value as a way to ensure the backup result is only computed 
     // if the manager fails to find an attached component.
     template< typename Component, typename BackupFn >
-    decltype(auto) get( Eid eid, BackupFn&& getDefault )
+    auto get( Eid eid, BackupFn&& getDefault )
+        -> decltype( (Component&) getDefault() )
     {
         return hasAttached< Component >( eid )
             ? get< Component >( eid ) : getDefault();
+    }
+
+    auto flag( Eid eid, Flags flag )
+        -> enable_if_t< HAS_FLAGS, BitRef >
+    {
+        assert( flag < Flags::_last );
+        return _attachments[ eid ][ COMPONENT_COUNT + flag ];
+    }
+
+    template< Flags Flag >
+    auto flag( Eid eid ) -> decltype( flag( eid, Flag ) )
+    {
+        static_assert( Flag < Flags::_last );
+        return flag( eid, Flag );
+    }
+
+    template< typename... Rest >
+    auto flags( Eid eid, Flags first, Rest... rest )
+        -> enable_if_t< HAS_FLAGS, std::array< BitRef, sizeof...(Rest) + 1 > >
+    {
+        return { flag( eid, first ), flag( eid, rest )... };
+    }
+
+    template< Flags First, Flags... Rest >
+    auto flags( Eid eid )
+        -> std::array< BitRef, sizeof...(Rest) + 1 >
+    {
+        return flags( eid, First, Rest... );
     }
 
 private:
@@ -295,9 +406,10 @@ public:
     // Returns true if the entity "matches" the signature composed by the supplied 
     // components. False otherwise.
     template< typename... Components >
-    bool match_signature( Eid eid ) const
+    constexpr bool match_signature( Eid eid ) const
     {
-        return _match_signature< Components... >( _attachments[ eid ].to_ullong() );
+        auto bitset = _attachments[ eid ].to_ullong() & ATTACHMENT_MASK;
+        return _match_signature< Components... >( bitset );
     }
 
 private:
@@ -337,28 +449,16 @@ private:
     static constexpr bool _validate_signature( std::tuple< First, Rest... >* )
     {
         return is_any< First, Components... >::value
-            && _validate_signature( (std::tuple< Rest... >*) 0 );
+            && _validate_signature< Rest... >( 0 );
     }
 
-    template< typename... Components >
-    static constexpr bool validate_system( std::tuple< Eid, Components... >* )
+    template< typename... Types >
+    static constexpr bool validate_signature( std::tuple< Types... >* = 0 )
     {
-        return _validate_signature( (std::tuple< Components... >*) 0 );
-    }
-
-    template< typename... Components >
-    static constexpr bool validate_process( std::tuple< Components... >* )
-    {
-        return _validate_signature( (std::tuple< Components... >*) 0 );
+        return _validate_signature< Types... >( 0 );
     }
 
 public:
-
-    generator< Eid > getEntities() const
-    {
-        for ( Eid eid : _entities )
-            co_yield eid;
-    }
 
     // Returns the number of entities managed by the ECS.
     int entityCount() const

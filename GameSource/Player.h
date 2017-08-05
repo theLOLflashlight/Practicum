@@ -101,16 +101,22 @@ struct ActionResult
     bool   succeeded;
     Action backupAction;
 
-    explicit ActionResult( bool success, Action backup = {} )
+    ActionResult( bool success, Action backup = {} )
         : succeeded { success }
         , backupAction { move( backup ) }
+    {
+    }
+
+    ActionResult( std::function< ActionResult() > func )
+        : succeeded { false }
+        , backupAction { move( func ) }
     {
     }
 };
 
 ActionResult Action::perform()
 {
-    return fnAction ? fnAction() : ActionResult( true );
+    return fnAction != nullptr ? fnAction() : ActionResult( true );
 }
 
 Action& Action::operator =( std::function< ActionResult() > func )

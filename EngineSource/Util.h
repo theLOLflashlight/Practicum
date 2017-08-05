@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include <variant>
 #include <array>
 #include <vector>
 #include <algorithm>
@@ -11,6 +12,8 @@
 #include <optional>
 #include <glm/glm.hpp>
 #include <experimental/generator>
+
+#include "random.h"
 
 using std::forward;
 using std::move;
@@ -32,19 +35,111 @@ using std::experimental::generator;
 using std::optional;
 using std::make_optional;
 
+using std::variant;
+using std::visit;
+
 using std::tuple;
 using std::tie;
 using std::make_tuple;
+using std::forward_as_tuple;
 using std::tuple_cat;
+
+using std::declval;
+
+#define DECLVAL( TYPE ) std::declval< TYPE >()
 
 template< typename Float >
 constexpr Float PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170;
+
+#define MEMFN( FN ) [this]( auto&&... args ) -> decltype(auto) { return (FN)( args... ); }
+
+#define REQUIRES( BOOL ) \
+typename... $Guard, typename = std::enable_if_t< sizeof...($Guard) == 0 && (BOOL) >
 
 //template< size_t N, typename... Types >
 //constexpr decltype(auto) get( tuple< Types... >& tup )
 //{
 //    return std::get< N >( tup );
 //}
+
+namespace std
+{
+    template< typename T, glm::precision P >
+    struct tuple_size< glm::tvec1< T, P > >
+        : std::integral_constant< std::size_t, 1 >
+    {
+    };
+
+    template< typename T, glm::precision P >
+    struct tuple_size< glm::tvec2< T, P > >
+        : std::integral_constant< std::size_t, 2 >
+    {
+    };
+
+    template< typename T, glm::precision P >
+    struct tuple_size< glm::tvec3< T, P > >
+        : std::integral_constant< std::size_t, 3 >
+    {
+    };
+
+    template< typename T, glm::precision P >
+    struct tuple_size< glm::tvec4< T, P > >
+        : std::integral_constant< std::size_t, 4 >
+    {
+    };
+
+    template< size_t N, typename T, glm::precision P >
+    auto get( glm::tvec1< T, P >& v )
+        -> enable_if_t< (N < 1), T& >
+    {
+        return v[ N ];
+    }
+
+    template< size_t N, typename T, glm::precision P >
+    auto get( glm::tvec2< T, P >& v )
+        -> enable_if_t< (N < 2), T& >
+    {
+        return v[ N ];
+    }
+
+    template< size_t N, typename T, glm::precision P >
+    auto get( glm::tvec3< T, P >& v )
+        -> enable_if_t< (N < 3), T& >
+    {
+        return v[ N ];
+    }
+
+    template< size_t N, typename T, glm::precision P >
+    auto get( glm::tvec4< T, P >& v )
+        -> enable_if_t< (N < 4), T& >
+    {
+        return v[ N ];
+    }
+
+    template< std::size_t N, typename T, glm::precision P >
+    struct tuple_element< N, glm::tvec1< T, P > >
+    {
+        using type = decltype( get< N >( glm::tvec1< T, P > {} ) );
+    };
+
+    template< std::size_t N, typename T, glm::precision P >
+    struct tuple_element< N, glm::tvec2< T, P > >
+    {
+        using type = decltype( get< N >( glm::tvec2< T, P > {} ) );
+    };
+
+    template< std::size_t N, typename T, glm::precision P >
+    struct tuple_element< N, glm::tvec3< T, P > >
+    {
+        using type = decltype( get< N >( glm::tvec3< T, P > {} ) );
+    };
+
+    template< std::size_t N, typename T, glm::precision P >
+    struct tuple_element< N, glm::tvec4< T, P > >
+    {
+        using type = decltype( get< N >( glm::tvec4< T, P > {} ) );
+    };
+}
 
 namespace detail
 {
@@ -465,6 +560,9 @@ struct is_any< T, First, Rest... >
 {
 };
 
+template< typename T, typename... Args >
+constexpr bool is_any_v = is_any< T, Args... >::value;
+
 enum LoopExitType
 {
     EXIT_BREAK, EXIT_CONTINUE, EXIT_RETURN
@@ -524,6 +622,24 @@ bool any_of( Range&& range, Return Class::*member )
     return false;
 }
 
+template< typename Last >
+constexpr bool _and( Last&& last )
+{
+    return bool( last );
+}
+
+template< typename First, typename... Rest >
+constexpr bool _and( First&& first, Rest&&... rest )
+{
+    return first && _and( forward< Rest >( rest )... );
+}
+
+template< typename... Args >
+constexpr bool and( Args&&... args )
+{
+    return _and( forward< Args >( args )... );
+}
+
 template< typename T >
 bool all( const T& t, std::initializer_list< T > il )
 {
@@ -550,6 +666,22 @@ bool none( const T& t, std::initializer_list< T > il )
             return false;
     return true;
 }
+
+template< typename T, typename First, typename... Rest >
+struct is_base_of_all
+{
+    static constexpr bool value = std::is_base_of_v< T, First >
+        && is_base_of_all< T, Rest... >::value;
+};
+
+template< typename T, typename First >
+struct is_base_of_all< T, First >
+{
+    static constexpr bool value = std::is_base_of_v< T, First >;
+};
+
+template< typename Base, typename... Derived >
+constexpr bool is_base_of_all_v = is_base_of_all< Base, Derived... >::value;
 
 template< size_t N, typename... Args >
 decltype(auto) get_n( Args&&... args )
