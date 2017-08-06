@@ -26,7 +26,6 @@
 #include <vector>
 #include <array>
 #include <bitset>
-#include <functional>
 
 #define FOR_COMPONENT( TYPE, NAME ) for ( TYPE& NAME : components< TYPE >() )
 
@@ -92,15 +91,45 @@ public:
     static constexpr LevelTile::Wall WALL_TILE = LevelTile::Wall::BRICK3;
     static constexpr LevelTile::Pit PIT_TILE = LevelTile::Pit::WATER1;
 
+    struct AI
+    {
+        DungeonScene& ds;
+        Eid           eid;
+
+        AI( DungeonScene* pScene, Eid eid )
+            : ds { *pScene }
+            , eid { eid }
+        {
+            assert( pScene != nullptr );
+        }
+
+        template< typename T >
+        Action operator ()( T& )
+        {
+            return [] { return ActionResult( true ); };
+        }
+
+        Action operator ()( WanderBehavior& bhvr );
+    };
+
 protected:
 
     Dungeon dungeon;
     Eid     playerId;
 
+    struct BlackSquare { vec2 pos; vec2 size; };
+    std::vector< BlackSquare > blackSquares;
+
+    struct FloorCorner { vec2 pos; vec2 off; };
+    std::vector< FloorCorner > floorCorners;
+
+    std::vector< PositionTween > posTweens;
+
 private:
 
     int currCharacterIndex = 0;
     std::vector< Eid > characters;
+    std::bitset< 4 > movementBuffer;
 
 public:
 
@@ -181,14 +210,12 @@ protected:
                     && (get< Stats >( playerId ).blocks & stats.blocks) != 0 )
                 {
                     blockMove = true;
-                    if ( hasAttached< HitPoints >( eid ) )
-                        basicAttack( playerId, eid );
+                    basicAttack( playerId, eid );
                 }
             } );
 
             if ( !blockMove )
             {
-                //playerPos += delta;
                 posTweens.push_back( PositionTween(
                     playerId,
                     playerPos + delta,
@@ -229,10 +256,11 @@ protected:
 
     ActionResult basicAttack( Eid attacker, Eid defender )
     {
-        #define CHECK match_signature< Position, Stats, HitPoints >
+        #define CHECK matches< Position, Stats, HitPoints >
 
         if ( CHECK( attacker ) && CHECK( defender ) )
         {
+            printf( "E.%i attacking E.%i\n", attacker, defender );
             get< HitPoints >( defender ) -= get< Stats >( attacker ).attack;
             return true;
         }
@@ -240,14 +268,6 @@ protected:
 
         #undef CHECK
     }
-
-    struct BlackSquare { vec2 pos; vec2 size; };
-    std::vector< BlackSquare > blackSquares;
-
-    struct FloorCorner { vec2 pos; vec2 off; };
-    std::vector< FloorCorner > floorCorners;
-
-    std::vector< PositionTween > posTweens;
 
     void initExtras()
     {
@@ -392,42 +412,10 @@ protected:
 
     Eid spawnEnemy( Position pos, Stats stats, Texture tex )
     {
-        Eid eid = newEntity();
-        attach( eid, pos );
-        attach( eid, stats );
-        attach( eid, tex );
-        attach( eid, stats.maxHealth );
-        //*
+        Eid eid = newEntity( pos, stats, tex, stats.maxHealth );
         attach< Behavior >( eid, WanderBehavior {
             rand_int( 3 ), {}
         } );
-        attach( eid, Action {} );
-        /*/
-        attach( eid, Action { [&, eid]
-        {
-            uint ticks = SDL_GetTicks();
-        
-            if ( !hasAttached< Delay >( eid ) )
-            {
-                static const vec2 VECTORS[]
-                {
-                    { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }
-                };
-                vec2 delta = VECTORS[ rand_int( 3 ) ];
-        
-                vec2 pos = get< Position >( eid ) / TILE_SIZE + delta;
-                moveEntity( eid, dungeon.findTile( pos.x, -pos.y ) );
-        
-                attach( eid, Delay( ENEMY_ACTION_DELAY, ticks ) );
-            }
-        
-            if ( get< Delay >( eid ).check( ticks ) )
-            {
-                detach< Delay >( eid );
-                return ActionResult( true );
-            }
-            return ActionResult( false );
-        } } );//*/
         return eid;
     }
 
@@ -516,8 +504,14 @@ public:
         for ( int i = 0; i < 5; ++i )
             characters.push_back( spawnEnemy(
                 randTilePos( Tile::FLOOR ), ENEMY_STATS, BEHOLDER_TEX ) );
+    }
 
-        // Load textures.
+    void resume( uint ticks ) override
+    {
+        Scene::resume( ticks );
+        useClear( vec4( vec3( 20, 12, 28 ) / 255f, 1 ) );
+
+        // Load textures. @TODO: improve performance.
         GLuint tex0 = load_texture< GLubyte[ 4 ] >( DEFAULT, 1, 1, { 0xff, 0xff, 0xff, 0xff } );
         
         GLuint tex1 = load_texture( FLOOR, "Textures/Floor.png" );
@@ -535,12 +529,6 @@ public:
         GLuint tex10 = load_texture( ELEMENTAL, "Textures/Enemies/Elemental0.png" );
     }
 
-    void resume( uint ticks ) override
-    {
-        Scene::resume( ticks );
-        useClear( vec4( vec3( 20, 12, 28 ) / 255f, 1 ) );
-    }
-
     void pause( uint ticks ) override
     {
         Scene::pause( ticks );
@@ -551,77 +539,20 @@ public:
         Scene::stop( ticks );
     }
 
-    std::bitset< 4 > movementBuffer;
+private:
 
-    struct AI
+    void inputSystem( uint ticks )
     {
-        DungeonScene* pScene;
-        Eid           eid;
-
-        template< typename T >
-        Action operator ()( T& )
-        {
-            return [] { return ActionResult( true ); };
-        }
-
-        Action operator ()( WanderBehavior& bhvr )
-        {
-            return [&, ntt = pScene->entity< Position, Action >( eid )]()
-                -> ActionResult
-            {
-                if ( !ntt ) return true;
-                uint ticks = SDL_GetTicks();
-
-                if ( chance( 0.10 ) )
-                {
-                    bhvr.heading += rand_int( 3, 5 );
-                    bhvr.heading %= 4;
-                }
-
-                while ( !bhvr.delay.started() )
-                {
-                    if ( chance( 0.15 ) )
-                        return true;
-
-                    static const vec2 VECTORS[]
-                    {
-                        { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 },
-                    };
-
-                    vec2 delta = VECTORS[ bhvr.heading ];
-                    vec2 pos = std::get< 0 >( *ntt ) / TILE_SIZE + delta;
-                    
-                    ActionResult result = pScene->moveEntity( eid,
-                        pScene->dungeon.findTile( pos.x, -pos.y ) );
-
-                    if ( result.succeeded )
-                        bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
-                    else
-                        bhvr.heading = rand_int( 3 );
-                }
-
-                if ( bhvr.delay.check( ticks ) )
-                {
-                    bhvr.delay.restart();
-                    return true;
-                }
-                return false;
-            };
-        }
-    };
-
-    void update( uint ticks ) override
-    {
-        Scene::update( ticks );
-
         // Player arrow key movement.
         auto keys = wereKeysPressed( SDLK_RIGHT, SDLK_LEFT, SDLK_DOWN, SDLK_UP );
 
+        bool isPlayerTweening = none_of(
+            posTweens, [&]( PositionTween& tween ) {
+                return playerId == tween.eid;
+            } );
+
         // Only allow player input if not tweening.
-        if ( none_of( posTweens,
-                     [&]( PositionTween& tween ) {
-                         return playerId == tween.eid;
-                     } ) )
+        if ( isPlayerTweening )
         {
             if ( movementBuffer.any() )
             {
@@ -660,29 +591,57 @@ public:
             if ( keys.any() )
                 movementBuffer = keys;
         }
+    }
+
+    void behaviorSystem( uint ticks )
+    {
+        Eid eid = currentCharacter();
 
         // Apply behaviors.
-        if ( auto ntt = entity< Action, Behavior >( currentCharacter() ) )
-        {
-            auto[ action, behavior ] = *ntt;
-            action = visit( AI { this, currentCharacter() }, behavior );
-        }
+        if ( hasAttached< Behavior >( eid ) )
+            attach( eid, visit( AI { this, eid }, get< Behavior >( eid ) ) );
 
         // Perform entity actions.
-        if ( auto tup = entity< Action >( currentCharacter() ) )
+        if ( hasAttached< Action >( eid ) )
         {
-            for ( Action& action = std::get< 0 >( *tup ); ; )
+            for ( Action& action = get< Action >( eid ); ; )
             {
-                ActionResult result = action.perform();
+                ActionResult result = perform( action );
                 if ( !result.succeeded )
-                    goto action_failure;
-                if ( result.backupAction )
+                    return;
+                if ( !result.backupAction )
                     break;
                 action = move( result.backupAction );
             }
         }
         nextCharacter();
-    action_failure: ;
+    }
+
+    void deathSystem( uint ticks )
+    {
+        // Handle entity death
+        for ( HpEntity ntt : entities< HitPoints >() )
+            if ( ntt.hp <= 0 )
+                flag< IS_DEAD >( ntt.eid ) = true;
+
+        remove_elements( posTweens, [&, ticks]( PositionTween& tween ) {
+            return tween.expired( ticks ) || flag< IS_DEAD >( tween.eid );
+        } );
+
+        remove_elements( characters, MEMFN( flag< IS_DEAD > ) );
+        currCharacterIndex %= characters.size();
+
+        deleteEntities( MEMFN( flag< IS_DEAD > ) );
+    }
+
+public:
+
+    void update( uint ticks ) override
+    {
+        Scene::update( ticks );
+
+        inputSystem( ticks );
+        behaviorSystem( ticks );
 
         // Update animations.
         for ( Animation& anim : components< Animation >() )
@@ -692,22 +651,7 @@ public:
         for ( auto& tween : posTweens )
             tween( ticks, get< Position >( tween.eid ) );
 
-        // Handle entity death
-        {
-            for ( HpEntity ntt : entities< HitPoints >() )
-                if ( ntt.hp <= 0 )
-                    flag< IS_DEAD >( ntt.eid ) = true;
-
-            remove_elements( posTweens, [&]( PositionTween& tween ) {
-                return tween.expired( ticks ) || flag< IS_DEAD >( tween.eid );
-            } );
-
-            remove_elements( characters, MEMFN( flag< IS_DEAD > ) );
-            currCharacterIndex %= characters.size();
-
-            deleteEntities( MEMFN( flag< IS_DEAD > ) );
-        }
-
+        deathSystem( ticks );
     }
 
     void draw() override
@@ -853,3 +797,47 @@ public:
         endFrame();
     }
 };
+
+inline Action DungeonScene::AI::operator ()( WanderBehavior& bhvr )
+{
+    return [&, ntt = ds.entity< Position, Action >( eid )]()
+        -> ActionResult
+    {
+        if ( !ntt ) return true;
+        uint ticks = SDL_GetTicks();
+
+        if ( chance( 0.10 ) )
+        {
+            bhvr.heading += rand_int( 3, 5 );
+            bhvr.heading %= 4;
+        }
+
+        while ( !bhvr.delay.started() )
+        {
+            if ( chance( 0.15 ) )
+                return true;
+
+            static const vec2 VECTORS[] {
+                { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 },
+            };
+
+            vec2 delta = VECTORS[ bhvr.heading ];
+            vec2 pos = std::get< 0 >( *ntt ) / TILE_SIZE + delta;
+
+            ActionResult result = ds.moveEntity( eid,
+                ds.dungeon.findTile( pos.x, -pos.y ) );
+
+            if ( result.succeeded )
+                bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
+            else
+                (bhvr.heading += rand_int( 1, 3 )) %= 4;
+        }
+
+        if ( bhvr.delay.check( ticks ) )
+        {
+            bhvr.delay.restart();
+            return true;
+        }
+        return false;
+    };
+}

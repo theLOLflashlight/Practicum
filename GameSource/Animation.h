@@ -6,7 +6,7 @@
 
 struct Animation
 {
-    using UpdateFn = std::function< void( float ) >;
+    using UpdateFn = function< void( float ) >;
 
     uint     start;
     uint     duration;

@@ -30,7 +30,7 @@ struct Entity
 
 protected:
 
-    template< size_t MaxEntities, typename... Components >
+    template< size_t VCapacity, typename... Components >
     friend class ComponentManager;
 
     Entity( const Entity& ntt )

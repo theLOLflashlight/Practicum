@@ -77,7 +77,7 @@ public:
     }
 
     // Resizes the array (not greater than capacity).
-    void resize( size_t newSize )
+    void resize( int newSize )
     {
         assert( newSize <= SIZE );
 

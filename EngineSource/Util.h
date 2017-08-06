@@ -7,13 +7,15 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
-#include <functional>
 #include <type_traits>
 #include <optional>
 #include <glm/glm.hpp>
 #include <experimental/generator>
 
 #include "random.h"
+#include "function.h"
+
+using func::function;
 
 using std::forward;
 using std::move;
@@ -47,6 +49,8 @@ using std::tuple_cat;
 using std::declval;
 
 #define DECLVAL( TYPE ) std::declval< TYPE >()
+
+#define RANGE( CONT ) std::begin( CONT ), std::end( CONT )
 
 template< typename Float >
 constexpr Float PI = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170;

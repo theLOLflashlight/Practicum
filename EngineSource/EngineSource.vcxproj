@@ -30,6 +30,7 @@
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityId.h" />
+    <ClInclude Include="function.h" />
     <ClInclude Include="glhelp.h" />
     <ClInclude Include="GlTextureManager.h" />
     <ClInclude Include="HashMap.h" />

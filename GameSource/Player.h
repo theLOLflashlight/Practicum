@@ -72,29 +72,7 @@ const Texture BEHOLDER_TEX {
 
 struct ActionResult;
 
-struct Action
-{
-    std::function< ActionResult() > fnAction;
-
-    ActionResult perform();
-
-    Action( std::function< ActionResult() > func = nullptr )
-        : fnAction { move( func ) }
-    {
-    }
-
-    Action( Action&& action ) = default;
-
-    Action& operator =( const Action& ) = default;
-    Action& operator =( Action&& ) = default;
-
-    Action& operator =( std::function< ActionResult() > func );
-
-    operator bool() const
-    {
-        return fnAction == nullptr;
-    }
-};
+using Action = function< ActionResult() >;
 
 struct ActionResult
 {
@@ -107,20 +85,14 @@ struct ActionResult
     {
     }
 
-    ActionResult( std::function< ActionResult() > func )
+    ActionResult( function< ActionResult() > func )
         : succeeded { false }
         , backupAction { move( func ) }
     {
     }
 };
 
-ActionResult Action::perform()
+ActionResult perform( Action& action )
 {
-    return fnAction != nullptr ? fnAction() : ActionResult( true );
-}
-
-Action& Action::operator =( std::function< ActionResult() > func )
-{
-    fnAction = std::move( func );
-    return *this;
+    return action != nullptr ? action() : ActionResult( true );
 }

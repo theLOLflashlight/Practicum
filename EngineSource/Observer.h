@@ -20,7 +20,7 @@ class Subject< Event, void( Args... ) >
 public:
 
     // Type of the observer function.
-    using FuncType = std::function< void( Args... ) >;
+    using FuncType = function< void( Args... ) >;
 
     struct Object
     {
@@ -63,17 +63,11 @@ public:
     template< typename Observer >
     void unregisterObserver( const Event& event, Observer&& observer )
     {
-        using namespace std;
-        auto& obsvs = _observers[ event ];
-
-        auto last = remove_if(
-            begin( obsvs ), end( obsvs ),
-            [&]( const FuncType& fn )
-            {
-                return typeid( Observer ) == fn.target_type();
-            } );
-
-        obsvs.erase( last, end( obsvs ) );
+        remove_elements( _observers[ event ], [&]( const FuncType& fn )
+        {
+            return typeid(Observer) == fn.target_type()
+                && std::memcmp( fn.target(), &observer, sizeof( Observer ) );
+        } );
     }
 
     // Notifies the observers of a particular event, passing on 
