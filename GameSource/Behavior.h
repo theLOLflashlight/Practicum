@@ -6,6 +6,7 @@
 #include "Delay.h"
 
 #include <variant>
+#include <vector>
 
 struct AbstractBehavior
 {
@@ -19,6 +20,23 @@ struct WanderBehavior
 {
     int   heading;
     Delay delay;
+
+    explicit WanderBehavior( int heading )
+        : heading { heading }
+    {
+    }
+};
+
+struct PathBehavior
+{
+    Eid eid;
+    RefVector< LevelTile > path;
+    Delay delay;
+
+    explicit PathBehavior( Eid eid )
+        : eid { eid }
+    {
+    }
 };
 
 template< typename... Behaviors >

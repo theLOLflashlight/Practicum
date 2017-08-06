@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Dictionary.h"
+#include "HashMap.h"
 #include "Util.h"
 
 #include <vector>
@@ -157,7 +158,7 @@ auto find_path(
     int           sizeHint = 10 )
 {
     using DistType = decltype( fnEstimate( start, goal ) );
-    return AStar< Node, DistType, Dictionary >::find_path(
+    return AStar< Node, DistType, HashMap >::find_path(
         start, goal,
         forward< EstimateFn >( fnEstimate ),
         forward< NodeCostFn >( fnNodeCost ),

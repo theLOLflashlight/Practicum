@@ -198,6 +198,14 @@ public:
         }
         return pEntry->value;
     }
+
+    Value* search( const Key& key )
+    {
+        Bucket& cell = table[ hash( key ) ];
+        if ( Entry* pEntry = cell.find( key ) )
+            return &pEntry->value;
+        return nullptr;
+    }
     
     const Value& operator []( const Key& key ) const
     {

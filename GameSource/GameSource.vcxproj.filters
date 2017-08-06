@@ -83,6 +83,9 @@
     <ClInclude Include="Behavior.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Npc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

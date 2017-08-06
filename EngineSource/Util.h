@@ -239,19 +239,25 @@ void remove_elements( std::vector< T >& cont, Pred&& pred )
     //}
 }
 
+template< typename T, glm::precision P >
+T manhattan( glm::tvec2< T, P > a, glm::tvec2< T, P > b )
+{
+    return (a.x - b.x) + (a.y - b.y);
+}
+
 inline glm::vec2 midpoint( glm::vec2 a, glm::vec2 b )
 {
     return (a + b) / 2.f;
 }
 
 template< typename T, glm::precision P >
-glm::tvec2< T, P > flip_x( const glm::tvec2< T, P > v )
+glm::tvec2< T, P > flip_x( glm::tvec2< T, P > v )
 {
     return { -v.x, v.y };
 }
 
 template< typename T, glm::precision P >
-glm::tvec2< T, P > flip_y( const glm::tvec2< T, P > v )
+glm::tvec2< T, P > flip_y( glm::tvec2< T, P > v )
 {
     return { v.x, -v.y };
 }

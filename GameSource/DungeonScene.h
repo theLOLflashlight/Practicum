@@ -21,6 +21,7 @@
 #include "Player.h"
 #include "Delay.h"
 #include "Behavior.h"
+#include "Npc.h"
 
 #include <glm/gtx/transform.hpp>
 #include <vector>
@@ -36,7 +37,8 @@ enum DungeonEntityFlags
     _last
 };
 
-using Behavior = VariadicBehavior< IdleBehavior, WanderBehavior >;
+using Behavior = VariadicBehavior<
+    IdleBehavior, WanderBehavior, PathBehavior >;
 
 using DungeonComponentManager = ComponentManager< 1000, DungeonEntityFlags,
     Position, HitPoints, Texture, Stats, Animation, Action, Delay, Behavior >;
@@ -110,12 +112,16 @@ public:
         }
 
         Action operator ()( WanderBehavior& bhvr );
+
+        Action operator ()( PathBehavior& bhvr );
     };
 
-protected:
+public:
 
     Dungeon dungeon;
     Eid     playerId;
+
+protected:
 
     struct BlackSquare { vec2 pos; vec2 size; };
     std::vector< BlackSquare > blackSquares;
@@ -410,12 +416,9 @@ protected:
         useSize( TEXTURE_SIZE[ texture ] );
     }
 
-    Eid spawnEnemy( Position pos, Stats stats, Texture tex )
+    Eid spawnEnemy( Position pos, Stats stats, Texture tex, Behavior bhvr )
     {
-        Eid eid = newEntity( pos, stats, tex, stats.maxHealth );
-        attach< Behavior >( eid, WanderBehavior {
-            rand_int( 3 ), {}
-        } );
+        Eid eid = newEntity( pos, stats, tex, stats.maxHealth, bhvr );
         return eid;
     }
 
@@ -501,9 +504,18 @@ public:
 
         static constexpr Stats ENEMY_STATS { 10, 3, 3, 2, Obstruction::GROUND };
 
-        for ( int i = 0; i < 5; ++i )
+        for ( int i = 0; i < 4; ++i )
             characters.push_back( spawnEnemy(
-                randTilePos( Tile::FLOOR ), ENEMY_STATS, BEHOLDER_TEX ) );
+                randTilePos( Tile::FLOOR ),
+                ENEMY_STATS, BEHOLDER_TEX,
+                WanderBehavior( rand_int( 3 ) )
+                ) );
+
+        characters.push_back( spawnEnemy(
+            randTilePos( Tile::FLOOR ),
+            ENEMY_STATS, SAURON_TEX,
+            PathBehavior( playerId )
+        ) );
     }
 
     void resume( uint ticks ) override
@@ -543,6 +555,9 @@ private:
 
     void inputSystem( uint ticks )
     {
+        if ( !exists( playerId ) )
+            return;
+
         // Player arrow key movement.
         auto keys = wereKeysPressed( SDLK_RIGHT, SDLK_LEFT, SDLK_DOWN, SDLK_UP );
 
@@ -607,11 +622,17 @@ private:
             for ( Action& action = get< Action >( eid ); ; )
             {
                 ActionResult result = perform( action );
+                
+                if ( result.backupAction )
+                {
+                    action = move( result.backupAction );
+                    continue;
+                }
+
                 if ( !result.succeeded )
                     return;
                 if ( !result.backupAction )
                     break;
-                action = move( result.backupAction );
             }
         }
         nextCharacter();
@@ -785,6 +806,7 @@ public:
 #endif
 
         // Draw Player
+        if ( exists( playerId ) )
         {
             auto& tex = get< Texture >( playerId );
             useTextureUnit( tex.textureUnit );
@@ -824,13 +846,68 @@ inline Action DungeonScene::AI::operator ()( WanderBehavior& bhvr )
             vec2 delta = VECTORS[ bhvr.heading ];
             vec2 pos = std::get< 0 >( *ntt ) / TILE_SIZE + delta;
 
-            ActionResult result = ds.moveEntity( eid,
-                ds.dungeon.findTile( pos.x, -pos.y ) );
+            LevelTile* pTile = ds.dungeon.findTile( pos.x, -pos.y );
+            if ( pTile && pTile->tileType == Tile::FLOOR )
+            {
+                ActionResult result = ds.moveEntity( eid, pTile );
 
-            if ( result.succeeded )
-                bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
+                if ( result.succeeded )
+                    bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
+
+                return result;
+            }
             else
+            {
                 (bhvr.heading += rand_int( 1, 3 )) %= 4;
+            }
+        }
+
+        if ( bhvr.delay.check( ticks ) )
+        {
+            bhvr.delay.restart();
+            return true;
+        }
+        return false;
+    };
+}
+
+inline Action DungeonScene::AI::operator ()( PathBehavior& bhvr )
+{
+    return [&, eid = eid]() -> ActionResult
+    {
+        if ( !ds.hasAttached< Position >( eid ) )
+            return true;
+
+        uint ticks = SDL_GetTicks();
+
+        while ( !bhvr.delay.started() && ds.exists( bhvr.eid ) )
+        {
+            Eid tgt = bhvr.eid;
+            if ( ds.hasAttached< Position >( tgt ) )
+            {
+                vec2 pos = ds.get< Position >( eid ) / TILE_SIZE;
+                vec2 tgtpos = ds.get< Position >( tgt ) / TILE_SIZE;
+
+                bhvr.path = find_path(
+                    ds.dungeon.getTile( pos.x, -pos.y ),
+                    ds.dungeon.getTile( tgtpos.x, -tgtpos.y ),
+                    ds.dungeon.distanceEstimateFunc(),
+                    ds.dungeon.tileCostFunc(),
+                    ds.dungeon.neighborsFunc()
+                );
+                if ( !bhvr.path.empty() )
+                    bhvr.path.pop_back();
+            }
+
+            if ( bhvr.path.empty() )
+                return true;
+
+            auto result = ds.moveEntity( eid, &bhvr.path.back().get() );
+
+            if ( !result.succeeded )
+                return result;
+
+            bhvr.delay.set( ENEMY_ACTION_DELAY, ticks );
         }
 
         if ( bhvr.delay.check( ticks ) )

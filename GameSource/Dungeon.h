@@ -2,6 +2,7 @@
 
 #include "Util.h"
 #include "SmartTexture.h"
+#include "Astar.h"
 
 #include <memory>
 #include <vector>
@@ -268,6 +269,23 @@ struct LevelTile
         return vec4( offset + ivec2( off.x, off.y ), 1, 1 ) * 16f;
     }
 };
+
+namespace std
+{
+    template<>
+    struct hash< std::reference_wrapper< LevelTile > >
+    {
+        size_t operator ()( const LevelTile& tile ) const
+        {
+            return (size_t) &tile;
+        }
+    };
+}
+
+inline bool operator ==( const LevelTile& lhs, const LevelTile& rhs )
+{
+    return &lhs == &rhs;
+}
 
 class Room
 {
@@ -550,11 +568,43 @@ public:
     vec2 tilePos( const LevelTile* pTile ) const
     {
         for ( const DungeonRoom& room : rooms )
-        {
             if ( room.owns( pTile ) )
                 return (vec2) room.tilePos( pTile ) + room.pos;
-        }
+        assert( false );
         return {};
+    }
+
+    auto distanceEstimateFunc()
+    {
+        return [this]( LevelTile& start, LevelTile& goal )
+        {
+            return manhattan( tilePos( &start ), tilePos( &goal ) );
+        };
+    }
+
+    auto tileCostFunc()
+    {
+        return [this]( LevelTile& tile )
+        {
+            return 1;
+        };
+    }
+
+    auto neighborsFunc()
+    {
+        return [this]( LevelTile& tile )
+        {
+            vec2 pos = tilePos( &tile );
+
+            static const ivec2 VECTORS[] {
+                { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 }
+            };
+
+            for ( ivec2 v : VECTORS )
+                if ( LevelTile* pTile = findTile( pos.x + v.x, pos.y + v.y ) )
+                    if ( pTile->tileType == Tile::FLOOR )
+                        co_yield std::ref( *pTile );
+        };
     }
 
     void addRoom( Room room, vec2 pos = { 0, 0 } )

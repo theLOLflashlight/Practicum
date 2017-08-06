@@ -1,11 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameSource", "GameSource\GameSource.vcxproj", "{6B97EE41-98DB-4D7E-B67B-6220CB5EAFD8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DCC18486-A107-4E88-BC31-206C5293AA2E} = {DCC18486-A107-4E88-BC31-206C5293AA2E}
+		{EAED0AE1-393E-4030-9924-2F4E5C21C7DC} = {EAED0AE1-393E-4030-9924-2F4E5C21C7DC}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderMaker", "ShaderMaker\ShaderMaker.vcxproj", "{EAED0AE1-393E-4030-9924-2F4E5C21C7DC}"
@@ -47,5 +48,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1C96CC49-D1D7-465C-9B76-15AEA1DE988B}
 	EndGlobalSection
 EndGlobal

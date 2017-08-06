@@ -213,6 +213,13 @@ private:
 
     #pragma endregion
 
+    // Ordered set of active entities given by their Eid.
+    EntityCollection     _entities;
+    // List of attached components and flags of each entity.
+    MetadataCollection   _metadata;
+    // Tuple of all components of each type.
+    ComponentsCollection _components;
+
 public:
 
     // Gets a component which is attached to an entity.
@@ -257,13 +264,6 @@ public:
 
 private:
 
-    // Ordered set of active entities given by their Eid.
-    EntityCollection     _entities;
-    // List of attached components and flags of each entity.
-    MetadataCollection   _metadata;
-    // Tuple of all components of each type.
-    ComponentsCollection _components;
-
     // Returns the next eid to be returned by newEntity().
     Eid _nextEid()
     {
@@ -301,7 +301,7 @@ public:
     bool exists( Eid eid ) const
     {
         assert( in_range( eid, 0, CAPACITY ) );
-        return binary_search( _entities, eid ) != _entities.end();
+        return std::find( _entities.begin(), _entities.end(), eid ) != _entities.end();
     }
 
     // Generates and returns a new entity with no attached components.
